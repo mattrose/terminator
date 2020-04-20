@@ -241,8 +241,15 @@ class Terminator(Borg):
             terminal.set_cwd(cwd)
         if profile and self.config['always_split_with_profile']:
             terminal.force_set_profile(None, profile)
+        #window.add(Gtk.HeaderBar())
+        #window.set_titlebar(Gtk.HeaderBar())
         window.add(terminal)
         window.show(True)
+        window.hb = Gtk.HeaderBar()
+        window.set_titlebar(window.hb)
+        window.show_all()
+        #window.show(window.hb)
+
         terminal.spawn_child()
 
         return(window, terminal)
