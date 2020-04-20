@@ -246,6 +246,7 @@ class Terminator(Borg):
         window.add(terminal)
         window.show(True)
         window.hb = Gtk.HeaderBar()
+        window.hb.set_show_close_button(True)
         window.set_titlebar(window.hb)
         window.show_all()
         #window.show(window.hb)
