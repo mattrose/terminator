@@ -10,7 +10,10 @@ from gi.repository import GLib, GObject, Pango, Gtk, Gdk
 gi.require_version('Vte', '2.91')  # vte-0.38 (gnome-3.14)
 from gi.repository import Vte
 import subprocess
-import urllib.request, urllib.parse, urllib.error
+try:
+    from urllib.parse import unquote as urlunquote
+except ImportError:
+    from urllib import unquote as urlunquote
 
 from .util import dbg, err, spawn_new_terminator, make_uuid, manual_lookup, display_manager
 from . import util
@@ -25,11 +28,7 @@ from .translation import _
 from .signalman import Signalman
 from . import plugin
 from terminatorlib.layoutlauncher import LayoutLauncher
-
-# constant for vte matching
-# TODO: Please replace with a proper reference to VTE, I found none!
-PCRE2_MULTILINE = 0x00000400
-
+from . import regex
 
 # pylint: disable-msg=R0904
 class Terminal(Gtk.VBox):
@@ -67,7 +66,7 @@ class Terminal(Gtk.VBox):
             (GObject.TYPE_INT,)),
         'group-all': (GObject.SignalFlags.RUN_LAST, None, ()),
         'group-all-toggle': (GObject.SignalFlags.RUN_LAST, None, ()),
-        'move-tab': (GObject.SignalFlags.RUN_LAST, None, 
+        'move-tab': (GObject.SignalFlags.RUN_LAST, None,
             (GObject.TYPE_STRING,)),
     }
 
@@ -76,7 +75,7 @@ class Terminal(Gtk.VBox):
 
     MOUSEBUTTON_LEFT = 1
     MOUSEBUTTON_MIDDLE = 2
-    MOUSEBUTTON_RIGHT = 3    
+    MOUSEBUTTON_RIGHT = 3
 
     terminator = None
     vte = None
@@ -147,7 +146,6 @@ class Terminal(Gtk.VBox):
         self.vte.show()
 
         self.default_encoding = self.vte.get_encoding()
-        self.regex_flags = (Vte.REGEX_FLAGS_DEFAULT | PCRE2_MULTILINE)
         self.update_url_matches()
 
         self.terminalbox = self.create_terminalbox()
@@ -259,8 +257,21 @@ class Terminal(Gtk.VBox):
         return(terminalbox)
 
     def _add_regex(self, name, re):
-        reg = Vte.Regex.new_for_match(re, len(re), self.regex_flags)
-        self.matches[name] = self.vte.match_add_regex(reg, 0)
+        match = -1
+        if regex.FLAGS_PCRE2:
+            try:
+                reg = Vte.Regex.new_for_match(re, len(re), self.regex_flags or regex.FLAGS_PCRE2)
+                match = self.vte.match_add_regex(reg, 0)
+            except GLib.Error:
+                # happens when PCRE2 support is not builtin (Ubuntu < 19.10)
+                pass
+
+        # try the "old" glib regex
+        if match < 0:
+            reg = GLib.Regex.new(re, self.regex_flags or regex.FLAGS_GLIB, 0)
+            match = self.vte.match_add_gregex(reg, 0)
+
+        self.matches[name] = match
         self.vte.match_set_cursor_name(self.matches[name], 'pointer')
 
     def update_url_matches(self):
@@ -277,7 +288,7 @@ class Terminal(Gtk.VBox):
         rboundry = "\\b"
 
         re = (lboundry + schemes +
-                "//(" + user + "@)?[" + hostchars  +".]+(:[0-9]+)?(" + 
+                "//(" + user + "@)?[" + hostchars  +".]+(:[0-9]+)?(" +
                 urlpath + ")?" + rboundry + "/?")
         self._add_regex('full_uri', re)
 
@@ -358,8 +369,8 @@ class Terminal(Gtk.VBox):
         self.cnxids.new(self.vte, 'popup-menu', self.popup_menu)
 
         srcvtetargets = [("vte", Gtk.TargetFlags.SAME_APP, self.TARGET_TYPE_VTE)]
-        dsttargets = [("vte", Gtk.TargetFlags.SAME_APP, self.TARGET_TYPE_VTE), 
-                      ('text/x-moz-url', 0, self.TARGET_TYPE_MOZ), 
+        dsttargets = [("vte", Gtk.TargetFlags.SAME_APP, self.TARGET_TYPE_VTE),
+                      ('text/x-moz-url', 0, self.TARGET_TYPE_MOZ),
                       ('_NETSCAPE_URL', 0, 0)]
         '''
         The following should work, but on my system it corrupts the returned
@@ -388,7 +399,7 @@ class Terminal(Gtk.VBox):
         dbg('Finalised drag targets: %s' % dsttargets)
 
         for (widget, mask) in [
-            (self.vte, Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.BUTTON3_MASK), 
+            (self.vte, Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.BUTTON3_MASK),
             (self.titlebar, Gdk.ModifierType.BUTTON1_MASK)]:
             widget.drag_source_set(mask, srcvtetargets, Gdk.DragAction.MOVE)
 
@@ -405,7 +416,7 @@ class Terminal(Gtk.VBox):
         self.cnxids.new(self.vte, 'drag-data-received',
             self.on_drag_data_received, self)
 
-        self.cnxids.new(self.vte, 'selection-changed', 
+        self.cnxids.new(self.vte, 'selection-changed',
             lambda widget: self.maybe_copy_clipboard())
 
         if self.composite_support:
@@ -502,7 +513,7 @@ class Terminal(Gtk.VBox):
         groupitems = []
         cnxs = []
 
-        for key, value in list({_('Broadcast _all'):'all', 
+        for key, value in list({_('Broadcast _all'):'all',
                           _('Broadcast _group'):'group',
                           _('Broadcast _off'):'off'}.items()):
             item = Gtk.RadioMenuItem.new_with_mnemonic(groupitems, key)
@@ -618,7 +629,7 @@ class Terminal(Gtk.VBox):
         if self.config['exit_action'] == 'restart':
             self.cnxids.new(self.vte, 'child-exited', self.spawn_child, True)
         elif self.config['exit_action'] in ('close', 'left'):
-            self.cnxids.new(self.vte, 'child-exited', 
+            self.cnxids.new(self.vte, 'child-exited',
                                             lambda x, y: self.emit('close-term'))
 
         if self.custom_encoding != True:
@@ -734,7 +745,7 @@ class Terminal(Gtk.VBox):
                 setattr(newcolor, "red",   y / 255.0)
                 setattr(newcolor, "green", y / 255.0)
                 setattr(newcolor, "blue",  y / 255.0)
-                self.palette_active.append(newcolor)        
+                self.palette_active.append(newcolor)
         self.palette_inactive = []
         for color in self.palette_active:
             newcolor = Gdk.RGBA()
@@ -806,7 +817,7 @@ class Terminal(Gtk.VBox):
     def set_cursor_color(self):
         """Set the cursor color appropriately"""
         if self.config['cursor_color_fg']:
-            self.vte.set_color_cursor(None) 
+            self.vte.set_color_cursor(None)
         else:
             cursor_color = Gdk.RGBA()
             cursor_color.parse(self.config['cursor_color'])
@@ -877,7 +888,7 @@ class Terminal(Gtk.VBox):
         if mapping == "hide_window":
             return(False)
 
-        if mapping and mapping not in ['close_window', 
+        if mapping and mapping not in ['close_window',
                                        'full_screen']:
             dbg('Terminal::on_keypress: lookup found: %r' % mapping)
             # handle the case where user has re-bound copy to ctrl+<key>
@@ -958,7 +969,7 @@ class Terminal(Gtk.VBox):
                 return(True)
 
         return(False)
-    
+
     def on_mousewheel(self, widget, event):
         """Handler for modifier + mouse wheel scroll events"""
         SMOOTH_SCROLL_UP = event.direction == Gdk.ScrollDirection.SMOOTH and event.delta_y <= 0.
@@ -1019,7 +1030,7 @@ class Terminal(Gtk.VBox):
         """Handle the start of a drag event"""
         Gtk.drag_set_icon_pixbuf(drag_context, util.widget_pixbuf(self, 512), 0, 0)
 
-    def on_drag_data_get(self, _widget, _drag_context, selection_data, info, 
+    def on_drag_data_get(self, _widget, _drag_context, selection_data, info,
             _time, data):
         """I have no idea what this does, drag and drop is a mystery. sorry."""
         selection_data.set(Gdk.atom_intern('vte', False), info,
@@ -1033,7 +1044,7 @@ class Terminal(Gtk.VBox):
             # copy text from another widget
             return
         srcwidget = Gtk.drag_get_source_widget(drag_context)
-        if(isinstance(srcwidget, Gtk.EventBox) and 
+        if(isinstance(srcwidget, Gtk.EventBox) and
            srcwidget == self.titlebar) or widget == srcwidget:
             # on self
             return
@@ -1064,7 +1075,7 @@ class Terminal(Gtk.VBox):
         elif pos == "left":
             coord = (topleft, topmiddle, bottommiddle, bottomleft)
         elif pos == "bottom":
-            coord = (bottomleft, bottomright, middleright , middleleft) 
+            coord = (bottomleft, bottomright, middleright , middleleft)
 
         #here, we define some widget internal values
         widget._draw_data = { 'color': color, 'coord' : coord }
@@ -1120,18 +1131,18 @@ class Terminal(Gtk.VBox):
                     str=''
                     for fname in txt_lines[:-1]:
                         dbg('drag data fname: %s' % fname)
-                        fname = "'%s'" % urllib.parse.unquote(fname[7:].replace("'",
+                        fname = "'%s'" % urlunquote(fname[7:].replace("'",
                                                                     '\'\\\'\''))
                         str += fname + ' '
                     txt=str
             for term in self.terminator.get_target_terms(self):
                 term.feed(txt)
             return
-        
+
         widgetsrc = data.terminator.terminals[int(selection_data.get_data())]
         srcvte = Gtk.drag_get_source_widget(drag_context)
         #check if computation requireds
-        if (isinstance(srcvte, Gtk.EventBox) and 
+        if (isinstance(srcvte, Gtk.EventBox) and
                 srcvte == self.titlebar) or srcvte == widget:
             return
 
@@ -1861,7 +1872,7 @@ class Terminal(Gtk.VBox):
 
     def key_insert_number(self):
         self.emit('enumerate', False)
-    
+
     def key_insert_padded(self):
         self.emit('enumerate', True)
 
@@ -1874,13 +1885,13 @@ class Terminal(Gtk.VBox):
         dialog.set_default_response(Gtk.ResponseType.ACCEPT)
         dialog.set_resizable(False)
         dialog.set_border_width(8)
-        
+
         label = Gtk.Label(label=_('Enter a new title for the Terminator window...'))
         name = Gtk.Entry()
         name.set_activates_default(True)
         if window.title.text != self.vte.get_window_title():
             name.set_text(self.get_toplevel().title.text)
-        
+
         dialog.vbox.pack_start(label, False, False, 6)
         dialog.vbox.pack_start(name, False, False, 6)
 
