@@ -939,8 +939,6 @@ class WindowTitle(object):
         else:
             title = "%s" % self.text
 
-        dbg("window children: %s" % self.window.get_children())
         self.window.props.title = title
-        #self.window.set_title(title)
         
 # vim: set expandtab ts=4 sw=4:
