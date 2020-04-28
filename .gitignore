@@ -23,3 +23,6 @@ terminatorlib/meliae
 .intltool*
 data/terminator.appdata.xml
 data/terminator.desktop
+
+## MacOS metadata
+.DS_Store
