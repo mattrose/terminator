@@ -45,11 +45,6 @@ class BuildData(build):
 
     if not self.distribution.without_gettext:
       # Build the translations
-      from babel.messages.frontend import extract_messages
-      extract = extract_messages(self.distribution)
-      extract.output_file = 'po/terminator.pot'
-      extract.input_paths = '.'
-      extract.mapping_fike = 'babel.cfg'
       for po in glob.glob (os.path.join (PO_DIR, '*.po')):
         lang = os.path.basename(po[:-3])
         mo = os.path.join(MO_DIR, lang, 'terminator.mo')
@@ -61,17 +56,12 @@ class BuildData(build):
 
         if newer(po, mo):
           info('compiling %s -> %s' % (po, mo))
-          try:
-            from babel.messages.frontend import compile_catalog
-            compiler = compile_catalog(self.distribution)
-            compiler.domain = ['terminator']
-            compiler.input_file = po
-            compiler.output_file = mo
-            compiler.run()
-          except Exception as e:
-            error("Building gettext files failed. Ensure you have gettext installed. Alternatively, try setup.py --without-gettext [build|install]")
-            error("Error: %s" % str(e))
-            sys.exit(1)
+          from babel.messages.frontend import compile_catalog
+          compiler = compile_catalog(self.distribution)
+          compiler.domain = ['terminator']
+          compiler.input_file = po
+          compiler.output_file = mo
+          compiler.run()
 
 class Uninstall(Command):
   description = "Attempt an uninstall from an install --record file"
@@ -216,6 +206,7 @@ setup(name=APP_NAME,
       setup_requires=[
           'pytest-runner',
           'babel',
+          'BabelGladeExtractor',
       ],
       install_requires=[
           'pycairo',
