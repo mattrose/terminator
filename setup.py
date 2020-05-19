@@ -196,6 +196,8 @@ if platform.system() == 'Darwin':
      extra_options = dict(
          app=['terminator'],
      )
+else:
+    extra_options=dict()
 
 mac_deps = [
     'py2app'
