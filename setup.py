@@ -200,6 +200,15 @@ test_deps = [
     'pytest'
 ]
 
+if platform.system() == 'Darwin':
+     extra_options = dict(
+         app=['terminator'],
+     )
+
+mac_deps = [
+    'py2app'
+]
+     
 setup(name=APP_NAME,
       version=APP_VERSION,
       description='Terminator, the robot future of terminals',
@@ -248,9 +257,11 @@ setup(name=APP_NAME,
           'psutil',
       ],
       tests_require=test_deps,
-      extras_require={'test': test_deps},
+      py2app_require=mac_deps,
+      extras_require={'test': test_deps, 'py2app':mac_deps},
       package_data={'terminatorlib': ['preferences.glade', 'layoutlauncher.glade']},
       cmdclass={'build': CustomBuild, 'install_data': InstallData, 'uninstall': Uninstall,
                 'update_catalogs': UpdateCatalogs},
-      distclass=TerminatorDist)
+      distclass=TerminatorDist,
+      **extra_options)
 
