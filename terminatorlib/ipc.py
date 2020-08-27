@@ -66,22 +66,33 @@ class DBusService(Borg, dbus.service.Object):
         if not self.terminator:
             self.terminator = Terminator()
 
+    def convert(options):
+        optionslist = {}
+        for opt, val in list(options.__dict__.items()):
+            if type(val) == type([]):
+                val = ' '.join(val)
+                if val == True:
+                    val = 'True'
+                optionslist[opt] = val and '%s'%val or ''
+        optionslist = dbus.Dictionary(optionslist, signature='ss')
+        return optionslist
+
     @dbus.service.method(BUS_NAME, in_signature='a{ss}')
-    def new_window_cmdline(self, options=dbus.Dictionary()):
+    def new_window_cmdline(self, options):
         """Create a new Window"""
         dbg('dbus method called: new_window with parameters %s'%(options))
         oldopts = self.terminator.config.options_get()
-        oldopts.__dict__ = options
+        oldopts.__dict__ = self.convert(options)
         self.terminator.config.options_set(oldopts)
         self.terminator.create_layout(oldopts.layout)
         self.terminator.layout_done()
             
     @dbus.service.method(BUS_NAME, in_signature='a{ss}')
-    def new_tab_cmdline(self, options=dbus.Dictionary()):
+    def new_tab_cmdline(self, options):
         """Create a new tab"""
         dbg('dbus method called: new_tab with parameters %s'%(options))
         oldopts = self.terminator.config.options_get()
-        oldopts.__dict__ = options
+        oldopts.__dict__ = self.convert(options)
         self.terminator.config.options_set(oldopts)
         window = self.terminator.get_windows()[0]
         window.tab_new()

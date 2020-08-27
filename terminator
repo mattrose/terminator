@@ -105,10 +105,10 @@ if __name__ == '__main__':
                 optionslist = dbus.Dictionary(optionslist, signature='ss')
                 if OPTIONS.new_tab:
                     dbg('Requesting a new tab')
-                    ipc.new_tab_cmdline(optionslist)
+                    ipc.new_tab_cmdline(OPTIONS)
                 else:
                     dbg('Requesting a new window')
-                    ipc.new_window_cmdline(optionslist)
+                    ipc.new_window_cmdline(OPTIONS)
                 sys.exit()
         except ImportError:
             dbg('dbus not imported')
