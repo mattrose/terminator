@@ -1,3 +1,4 @@
 include .gitignore
-exclude data/terminator.appdata.xml data/terminator.desktop
+include data/terminator.appdata.xml.in data/terminator.desktop.in 
+exclude data/terminator.metadata.xml data/terminator.desktop
 exclude po/.intltool-merge-cache
