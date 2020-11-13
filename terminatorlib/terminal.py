@@ -39,12 +39,22 @@ class Overpaint(Vte.Terminal):
     def do_draw(self,cr):
         Vte.Terminal.do_draw(self,cr)
         bgc = Vte.Terminal.get_color_background_for_draw(self)
+        print("done drawing")
         if self.overpaint:
             bgc.alpha = 0.5
             cr.set_operator(cairo.Operator.OVER)
             Gdk.cairo_set_source_rgba(cr,bgc)
             cr.rectangle(0.0,0.0,self.get_allocated_width(),self.get_allocated_height())
             cr.paint()
+            print("done painting")
+        else:
+            bgc.alpha = 0.0
+            cr.set_operator(cairo.Operator.OVER)
+            Gdk.cairo_set_source_rgba(cr,bgc)
+            cr.rectangle(0.0,0.0,self.get_allocated_width(),self.get_allocated_height())
+            cr.paint()
+            print("done painting")
+
             
 
 # pylint: disable-msg=R0904
@@ -154,6 +164,7 @@ class Terminal(Gtk.VBox):
         # self.vte = Vte.Terminal()
         self.vte = Overpaint()
         self.vte.dim(False)
+        self.queue_draw()
         self.background_image = None
         if self.config['background_image'] != '':
             self.vte.set_clear_background(False)
@@ -1318,9 +1329,10 @@ class Terminal(Gtk.VBox):
     def on_vte_focus_in(self, _widget, _event):
         """Inform other parts of the application when focus is received"""
         self.vte.dim(False)
-        #self.vte.set_colors(self.fgcolor_active, self.bgcolor,
-        #                    self.palette_active)
-        #self.set_cursor_color()
+        self.queue_draw()
+        self.vte.set_colors(self.fgcolor_active, self.bgcolor,
+                            self.palette_active)
+        self.set_cursor_color()
         if not self.terminator.doing_layout:
             self.terminator.last_focused_term = self
             if self.get_toplevel().is_child_notebook():
@@ -1338,6 +1350,7 @@ class Terminal(Gtk.VBox):
                             self.palette_active)
         self.set_cursor_color()
         self.vte.dim(True)
+        self.queue_draw()
         self.emit('focus-out')
 
     def on_window_focus_out(self):
