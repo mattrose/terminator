@@ -56,6 +56,10 @@ Default value: \fBnormal\fR
 Controls whether the Terminator window will be started without window borders
 Default value: \fBFalse\fR
 .TP
+.B extra_styling \fR(boolean)
+For themes we have the option to include some additional CSS code to make the window a bit prettier. For example under the Ubuntu Ambiance theme GNOME Terminal has custom tabs. In line with our unofficial policy of following gnome-terminal, I have replicated that customisation for Terminator. Some may prefer to use the unadulterated standard tabs, so using this option the extra styling can be turned off.
+Default value: \fBTrue\fR
+.TP
 .B tab_position
 Defines where tabs are placed.  Can be any of: top, left, right, bottom.
 If this is set to "hidden", the tab bar will not be shown. Note that hiding the tab bar is very confusing and not recommended.
