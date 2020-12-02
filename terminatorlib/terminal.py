@@ -39,8 +39,16 @@ class Overpaint(Vte.Terminal):
         ### inactive_color_offset is the opposite of alpha level
         self.dim_p = float(self.config['inactive_color_offset'])
         self.dim_l = round(1.0 - self.dim_p,3) 
+        self.transparency = True
+
     def dim(self,b):
         self.overpaint = b
+
+    def make_opaque(self):
+        self.transparency = False
+
+    def make_clear(self):
+        self.transparency = True
 
     def do_draw(self,cr):
         ### get_color_background_for_draw is not available in older 
@@ -50,6 +58,18 @@ class Overpaint(Vte.Terminal):
         except AttributeError as e:
             bgc = Gdk.RGBA()
             bgc.parse(self.config['background_color'])
+        if self.transparency:
+            bgc.alpha = float(self.config['background_darkness'])
+            cr.set_operator(cairo.Operator.OVER)
+            Gdk.cairo_set_source_rgba(cr,bgc)
+            cr.rectangle(0.0,0.0,self.get_allocated_width(),self.get_allocated_height())
+            cr.paint()
+        else:
+            bgc.alpha = 1.0
+            cr.set_operator(cairo.Operator.OVER)
+            Gdk.cairo_set_source_rgba(cr,bgc)
+            cr.rectangle(0.0,0.0,self.get_allocated_width(),self.get_allocated_height())
+            cr.paint()
         Vte.Terminal.do_draw(self,cr)
         if self.overpaint:
             bgc.alpha = self.dim_l
@@ -161,6 +181,8 @@ class Terminal(Gtk.VBox):
         self.pending_on_vte_size_allocate = False
 
         self.vte = Overpaint()
+        if self.config['opaque_on_focus']:
+            self.vte.make_opaque()
         self.vte.dim(False)
         self.queue_draw()
         self.background_image = None
@@ -772,9 +794,13 @@ class Terminal(Gtk.VBox):
                                 self.palette_active)
 
         if self.terminator.last_focused_term == self:
+            if self.config['opaque_on_focus']:
+                self.vte.make_opaque()
             self.vte.dim(False)
             self.queue_draw()
         else:
+            if self.config['opaque_on_focus']:
+                self.vte.make_clear()
             self.vte.dim(True)
             self.queue_draw()
         profiles = self.config.base.profiles
@@ -1287,6 +1313,8 @@ class Terminal(Gtk.VBox):
 
     def on_vte_focus_in(self, _widget, _event):
         """Inform other parts of the application when focus is received"""
+        if self.config['opaque_on_focus']:
+            self.vte.make_opaque()
         self.vte.dim(False)
         self.queue_draw()
         if not self.terminator.doing_layout:
@@ -1302,6 +1330,8 @@ class Terminal(Gtk.VBox):
 
     def on_vte_focus_out(self, _widget, _event):
         """Inform other parts of the application when focus is lost"""
+        if self.config['opaque_on_focus']:
+            self.vte.make_clear()
         self.vte.dim(True)
         self.queue_draw()
         self.emit('focus-out')
