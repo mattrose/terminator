@@ -60,7 +60,6 @@ class Overpaint(Vte.Terminal):
             bgc.parse(self.config['background_color'])
 
         if self.transparency:
-            print(self.transparency)
             bgc.alpha = float(self.config['background_darkness'])
             cr.set_operator(cairo.Operator.OVER)
             Gdk.cairo_set_source_rgba(cr,bgc)
@@ -68,10 +67,7 @@ class Overpaint(Vte.Terminal):
             cr.paint()
 
         else:
-            print(self.transparency)
             bgc.alpha = 1.0
-            print(bgc)
-            print(cr.get_operator())
             cr.set_operator(cairo.Operator.OVER)
             Gdk.cairo_set_source_rgba(cr,bgc)
             cr.rectangle(0.0,0.0,self.get_allocated_width(),self.get_allocated_height())
@@ -1196,7 +1192,6 @@ class Terminal(Gtk.VBox):
         URL or another terminal."""
         ### FIXME this code is a mess that I don't quite understand how it works.
         dbg('drag data received of type: %s' % (selection_data.get_data_type()))
-        # print(selection_data.get_urls())
         if Gtk.targets_include_text(drag_context.list_targets()) or \
            Gtk.targets_include_uri(drag_context.list_targets()):
             # copy text with no modification yet to destination
@@ -1323,7 +1318,6 @@ class Terminal(Gtk.VBox):
 
     def on_vte_focus_in(self, _widget, _event):
         """Inform other parts of the application when focus is received"""
-        print("focus in %s" % self.vte)
         if self.config['opaque_on_focus']:
             self.vte.make_opaque()
         self.vte.dim(False)
@@ -1341,7 +1335,6 @@ class Terminal(Gtk.VBox):
 
     def on_vte_focus_out(self, _widget, _event):
         """Inform other parts of the application when focus is lost"""
-        print("focus out %s" % self.vte)
         if self.config['opaque_on_focus']:
             self.vte.make_clear()
         self.vte.dim(True)
@@ -1350,7 +1343,6 @@ class Terminal(Gtk.VBox):
 
     def on_window_focus_out(self):
         """Update our UI when the window loses focus"""
-        print("window focus out")
         if self.config['opaque_on_focus']:
             self.vte.make_clear()
         self.vte.dim(True)

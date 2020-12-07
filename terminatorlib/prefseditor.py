@@ -635,6 +635,9 @@ class PrefsEditor:
             guiget('transparent_radiobutton').set_active(True)
         elif self.config['background_type'] == 'image':
             guiget('image_radiobutton').set_active(True)
+        widget = guiget('opaque_on_focus_checkbox')
+        widget.set_active(self.config['opaque_on_focus'])
+        print(widget.get_active())
         self.update_background_tab()
         # Background shading
         widget = guiget('background_darkness_scale')
@@ -1492,9 +1495,8 @@ class PrefsEditor:
         widget.set_active(3)
 
     def on_opaque_background_checkbutton_toggled(self, widget):
-        self.update_background_tab()
-        #self.config['opaque_on_focus'] = widget.get_active()
-        #self.config.save()
+        self.config['opaque_on_focus'] = widget.get_active()
+        self.config.save()
 
     def on_background_type_toggled(self, _widget):
         """The background type was toggled"""
@@ -1508,7 +1510,6 @@ class PrefsEditor:
         backtype = None
         imagewidget = guiget('image_radiobutton')
         transwidget = guiget('transparent_radiobutton')
-        opaque_widget = guiget('opaque_on_focus_checkbox')
 
         if imagewidget.get_active() == True:
             backtype = 'image'
@@ -1517,9 +1518,7 @@ class PrefsEditor:
         else:
             backtype = 'solid'
         self.config['background_type'] = backtype
-        self.config['opaque_on_focus'] = opaque_widget.get_active()
         self.config.save()
-
         if backtype == 'image':
                 guiget('background_image_file').set_sensitive(True)
         else:
@@ -1531,6 +1530,7 @@ class PrefsEditor:
         else:
             guiget('darken_background_scale').set_sensitive(False)
             guiget('opaque_on_focus_checkbox').set_sensitive(False)
+            guiget('opaque_on_focus_checkbox').set_active(False)
 
     def on_profile_selection_changed(self, selection):
         """A different profile was selected"""
