@@ -194,6 +194,8 @@ class Terminal(Gtk.VBox):
         self.vte.dim(False)
         self.queue_draw()
         self.background_image = None
+        if self.config['background_type'] == 'transparent' and self.config['opaque_on_focus'] == True:
+            self.vte.set_clear_background(False)
         if self.config['background_image'] != '':
             try: 
                 self.background_image = GdkPixbuf.Pixbuf.new_from_file(self.config['background_image'])
