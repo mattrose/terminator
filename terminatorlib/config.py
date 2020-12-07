@@ -125,7 +125,6 @@ DEFAULTS = {
             'line_height'           : 1.0,
             'case_sensitive'        : True,
             'invert_search'         : False,
-            'opaque_on_focus'       : False,
         },
         'keybindings': {
             'zoom_in'          : '<Control>plus',
@@ -257,6 +256,7 @@ DEFAULTS = {
                 'http_proxy'            : '',
                 'ignore_hosts'          : ['localhost','127.0.0.0/8','*.local'],
                 'background_image'      : '',
+                'opaque_on_focus'       : False,
                 'background_alpha'      : 0.0
             },
         },
