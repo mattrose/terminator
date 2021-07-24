@@ -135,13 +135,15 @@ class Window(Container, Gtk.Window):
                         self.config['keybindings']['hide_window'].replace('<Shift>',''),
                         self.on_hide_window)
                 except (KeyError, NameError):
-                    pass
+                    dbg("error grabbing hide_window key")
 
                 if not self.hidebound:
                     err('Unable to bind hide_window key, another instance/window has it.')
                     self.hidefunc = self.iconify
                 else:
                     self.hidefunc = self.hide
+        else:
+            dbg("hide_window not in Wayland")
 
     def apply_config(self):
         """Apply various configuration options"""
@@ -219,6 +221,7 @@ class Window(Container, Gtk.Window):
                     self.on_destroy_event(window,
                             Gdk.Event.new(Gdk.EventType.DESTROY))
             else:
+                dbg('mapping: %s' % mapping)
                 return(False)
             return(True)
 
@@ -308,6 +311,7 @@ class Window(Container, Gtk.Window):
     def on_hide_window(self, data=None):
         """Handle a request to hide/show the window"""
 
+        print("in hide_window")
         if not self.get_property('visible'):
             #Don't show if window has just been hidden because of
             #lost focus
