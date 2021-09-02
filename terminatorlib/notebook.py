@@ -42,11 +42,13 @@ class Notebook(Container, Gtk.Notebook):
 
         self.set_can_focus(False)
 
+        print(window.get_children())
         child = window.get_child()
-        window.remove(child)
-        window.add(self)
+        # window.remove(child)
+        # window.add(self)
         window_last_active_term = window.last_active_term
-        self.newtab(widget=child)
+        self.add(widget=child)
+        # self.newtab(widget=child)
         if window_last_active_term:
             self.set_last_active_term(window_last_active_term)
             window.last_active_term = None
@@ -113,8 +115,9 @@ class Notebook(Container, Gtk.Notebook):
             return
 
         children = layout['children']
-        if len(children) <= 1:
-            #Notebooks should have two or more children
+        print(len(children))
+        if len(children) < 0:
+            #Notebooks should have more than one child
             err('incorrect number of children for Notebook: %s' % layout)
             return
 
@@ -262,7 +265,7 @@ class Notebook(Container, Gtk.Notebook):
         """Add a new tab, optionally supplying a child widget"""
         dbg('making a new tab')
         maker = Factory()
-        top_window = self.get_toplevel()
+        top_window = self.window.get_toplevel()
 
         if not widget:
             widget = maker.make('Terminal')

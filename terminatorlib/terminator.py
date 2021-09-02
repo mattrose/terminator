@@ -205,12 +205,13 @@ class Terminator(Borg):
         """Create a window with a Terminal in it"""
         maker = Factory()
         window = maker.make('Window')
+        notebook = maker.make('Notebook', window=window)
         terminal = maker.make('Terminal')
         if cwd:
             terminal.set_cwd(cwd)
         if profile and self.config['always_split_with_profile']:
             terminal.force_set_profile(None, profile)
-        window.add(terminal)
+        window.add(notebook)
         window.show(True)
         terminal.spawn_child()
 
