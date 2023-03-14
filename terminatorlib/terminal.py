@@ -32,7 +32,7 @@ from terminatorlib.layoutlauncher import LayoutLauncher
 from . import regex
 
 # pylint: disable-msg=R0904
-class Terminal(Gtk.VBox):
+class Terminal(Gtk.Box):
     """Class implementing the VTE widget and its wrappings"""
 
     __gsignals__ = {
@@ -124,7 +124,7 @@ class Terminal(Gtk.VBox):
     def __init__(self):
         """Class initialiser"""
         GObject.GObject.__init__(self)
-
+        self.set_orientation(Gtk.Orientation.VERTICAL)
         self.terminator = Terminator()
         self.terminator.register_terminal(self)
 

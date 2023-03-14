@@ -23,15 +23,15 @@ from .version import APP_NAME
 from .container import Container
 from .factory import Factory
 from .terminator import Terminator
-if display_manager() == 'X11':
-    try:
-        gi.require_version('Keybinder', '3.0')
-        from gi.repository import Keybinder
-        Keybinder.init()
-        Keybinder.set_use_cooked_accelerators(False)
-    except (ImportError, ValueError):
-        err('Unable to load Keybinder module. This means the \
-hide_window shortcut will be unavailable')
+#if display_manager() == 'X11':
+#    try:
+#        gi.require_version('Keybinder', '3.0')
+#        from gi.repository import Keybinder
+#        Keybinder.init()
+#        Keybinder.set_use_cooked_accelerators(False)
+#    except (ImportError, ValueError):
+#        err('Unable to load Keybinder module. This means the \
+# hide_window shortcut will be unavailable')
 
 # pylint: disable-msg=R0904
 class Window(Container, Gtk.Window):

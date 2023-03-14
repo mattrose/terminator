@@ -487,8 +487,8 @@ class Terminator(Borg):
         # Apply the providers, incrementing priority so they don't cancel out
         # each other
         for idx in range(0, len(self.style_providers)):
-            Gtk.StyleContext.add_provider_for_screen(
-                Gdk.Screen.get_default(),
+            Gtk.StyleContext.add_provider_for_display(
+                Gdk.Display.get_default(),
                 self.style_providers[idx],
                 Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION+idx)
 
