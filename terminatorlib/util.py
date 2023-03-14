@@ -28,7 +28,7 @@ import gi
 
 
 try:
-    gi.require_version('Gtk','3.0')
+    gi.require_version('Gtk','4.0')
     from gi.repository import Gtk, Gdk
 except ImportError:
     print('You need Gtk 3.0+ to run Remotinator.')

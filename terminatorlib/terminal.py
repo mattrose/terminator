@@ -7,7 +7,7 @@ import os
 import signal
 import gi
 from gi.repository import GLib, GObject, Pango, Gtk, Gdk, GdkPixbuf, cairo
-gi.require_version('Vte', '2.91')  # vte-0.38 (gnome-3.14)
+gi.require_version('Vte', '3.91')  # vte-0.38 (gnome-3.14)
 from gi.repository import Vte
 import subprocess
 try:
