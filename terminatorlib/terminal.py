@@ -21,10 +21,10 @@ from .config import Config
 from .cwd import get_pid_cwd
 from .factory import Factory
 from .terminator import Terminator
-from .titlebar import Titlebar
+# from .titlebar import Titlebar
 from .terminal_popup_menu import TerminalPopupMenu
 from .prefseditor import PrefsEditor
-from .searchbar import Searchbar
+# from .searchbar import Searchbar
 from .translation import _
 from .signalman import Signalman
 from . import plugin
@@ -160,26 +160,26 @@ class Terminal(Gtk.VBox):
 
         self.terminalbox = self.create_terminalbox()
 
-        self.titlebar = Titlebar(self)
-        self.titlebar.connect_icon(self.on_group_button_press)
-        self.titlebar.connect('edit-done', self.on_edit_done)
-        self.connect('title-change', self.titlebar.set_terminal_title)
-        self.titlebar.connect('create-group', self.really_create_group)
-        self.titlebar.update('window-focus-out')
-        self.titlebar.show_all()
+        # self.titlebar = Titlebar(self)
+        # self.titlebar.connect_icon(self.on_group_button_press)
+        # self.titlebar.connect('edit-done', self.on_edit_done)
+        # self.connect('title-change', self.titlebar.set_terminal_title)
+        # self.titlebar.connect('create-group', self.really_create_group)
+        # self.titlebar.update('window-focus-out')
+        # self.titlebar.show_all()
 
-        self.searchbar = Searchbar()
-        self.searchbar.connect('end-search', self.on_search_done)
+        # self.searchbar = Searchbar()
+        # self.searchbar.connect('end-search', self.on_search_done)
 
         self.show()
-        if self.config['title_at_bottom']:
-            self.pack_start(self.terminalbox, True, True, 0)
-            self.pack_start(self.titlebar, False, True, 0)
-        else:
-            self.pack_start(self.titlebar, False, True, 0)
-            self.pack_start(self.terminalbox, True, True, 0)
+        # if self.config['title_at_bottom']:
+        #    self.pack_start(self.terminalbox, True, True, 0)
+        #    self.pack_start(self.titlebar, False, True, 0)
+        #else:
+        #    self.pack_start(self.titlebar, False, True, 0)
+        #    self.pack_start(self.terminalbox, True, True, 0)
 
-        self.pack_end(self.searchbar, True, True, 0)
+        # self.pack_end(self.searchbar, True, True, 0)
 
         self.connect_signals()
 
@@ -276,11 +276,11 @@ class Terminal(Gtk.VBox):
         """Create a GtkHBox containing the terminal and a scrollbar"""
 
         terminalbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
-        self.scrollbar = Gtk.Scrollbar.new(Gtk.Orientation.VERTICAL, adjustment=self.vte.get_vadjustment())
-        self.scrollbar.set_no_show_all(True)
+        # self.scrollbar = Gtk.Scrollbar.new(Gtk.Orientation.VERTICAL, adjustment=self.vte.get_vadjustment())
+        # self.scrollbar.set_no_show_all(True)
 
         terminalbox.pack_start(self.vte, True, True, 0)
-        terminalbox.pack_start(self.scrollbar, False, True, 0)
+        # terminalbox.pack_start(self.scrollbar, False, True, 0)
         terminalbox.show_all()
 
         return(terminalbox)
@@ -390,7 +390,7 @@ class Terminal(Gtk.VBox):
     def connect_signals(self):
         """Connect all the gtk signals and drag-n-drop mechanics"""
 
-        self.scrollbar.connect('button-press-event', self.on_buttonpress)
+        # self.scrollbar.connect('button-press-event', self.on_buttonpress)
 
         self.cnxids.new(self.vte, 'key-press-event', self.on_keypress)
         self.cnxids.new(self.vte, 'button-press-event', self.on_buttonpress)
@@ -429,14 +429,16 @@ class Terminal(Gtk.VBox):
 
         for (widget, mask) in [
             (self.vte, Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.BUTTON3_MASK),
-            (self.titlebar, Gdk.ModifierType.BUTTON1_MASK)]:
+            # (self.titlebar, Gdk.ModifierType.BUTTON1_MASK)
+            ]:
             widget.drag_source_set(mask, srcvtetargets, Gdk.DragAction.MOVE)
 
         self.vte.drag_dest_set(Gtk.DestDefaults.MOTION |
                 Gtk.DestDefaults.HIGHLIGHT | Gtk.DestDefaults.DROP,
                 dsttargets, Gdk.DragAction.COPY | Gdk.DragAction.MOVE)
 
-        for widget in [self.vte, self.titlebar]:
+        #for widget in [self.vte, self.titlebar]:
+        for widget in [self.vte]:
             self.cnxids.new(widget, 'drag-begin', self.on_drag_begin, self)
             self.cnxids.new(widget, 'drag-data-get', self.on_drag_data_get,
             self)
@@ -603,13 +605,13 @@ class Terminal(Gtk.VBox):
             return
         dbg('Setting group to %s' % name)
         self.group = name
-        self.titlebar.set_group_label(name)
+        # self.titlebar.set_group_label(name)
         self.terminator.group_hoover()
 
     def create_group(self, _item):
         """Trigger the creation of a group via the titlebar (because popup 
         windows are really lame)"""
-        self.titlebar.create_group()
+        # self.titlebar.create_group()
 
     def really_create_group(self, _widget, groupname):
         """The titlebar has spoken, let a group be created"""
@@ -849,16 +851,16 @@ class Terminal(Gtk.VBox):
         self.vte.set_scroll_on_keystroke(self.config['scroll_on_keystroke'])
         self.vte.set_scroll_on_output(self.config['scroll_on_output'])
 
-        if self.config['scrollbar_position'] in ['disabled', 'hidden']:
-            self.scrollbar.hide()
-        else:
-            self.scrollbar.show()
-            if self.config['scrollbar_position'] == 'left':
-                self.terminalbox.reorder_child(self.scrollbar, 0)
-            elif self.config['scrollbar_position'] == 'right':
-                self.terminalbox.reorder_child(self.vte, 0)
+        #if self.config['scrollbar_position'] in ['disabled', 'hidden']:
+        #    self.scrollbar.hide()
+        # else:
+        #    self.scrollbar.show()
+        #    if self.config['scrollbar_position'] == 'left':
+        #        self.terminalbox.reorder_child(self.scrollbar, 0)
+        #    elif self.config['scrollbar_position'] == 'right':
+        #        self.terminalbox.reorder_child(self.vte, 0)
 
-        self.titlebar.update()
+        # self.titlebar.update()
         self.vte.queue_draw()
 
     def set_cursor_color(self):
@@ -909,18 +911,18 @@ class Terminal(Gtk.VBox):
                         # terminal to this group
                         new_group = self.terminator.new_random_group()
                         focused.set_group(None, new_group)
-                        focused.titlebar.update()
+                        # focused.titlebar.update()
                     elif self.group == focused.group:
                         new_group = None
                     else:
                         new_group = focused.group
                     [term.set_group(None, new_group) for term in targets]
-                    [term.titlebar.update(focused) for term in targets]
+                    # [term.titlebar.update(focused) for term in targets]
                 return True
             elif event.get_state() & Gdk.ModifierType.SHIFT_MASK == Gdk.ModifierType.SHIFT_MASK:
                 dbg('on_group_button_press: rename of terminals group')
                 self.targets_for_new_group = targets
-                self.titlebar.create_group()
+                # self.titlebar.create_group()
                 return True
             elif event.type == Gdk.EventType.BUTTON_PRESS:
                 # Single Click gives popup
@@ -1081,7 +1083,7 @@ class Terminal(Gtk.VBox):
 
     def do_scrollbar_toggle(self):
         """Show or hide the terminal scrollbar"""
-        self.toggle_widget_visibility(self.scrollbar)
+        # self.toggle_widget_visibility(self.scrollbar)
 
     def toggle_widget_visibility(self, widget):
         """Show or hide a widget"""
@@ -1109,8 +1111,9 @@ class Terminal(Gtk.VBox):
             # copy text from another widget
             return
         srcwidget = Gtk.drag_get_source_widget(drag_context)
-        if(isinstance(srcwidget, Gtk.EventBox) and
-           srcwidget == self.titlebar) or widget == srcwidget:
+        #if(isinstance(srcwidget, Gtk.EventBox) and
+        #   srcwidget == self.titlebar) or widget == srcwidget:
+        if(isinstance(srcwidget, Gtk.EventBox)) or widget == srcwidget:
             # on self
             return
 
@@ -1267,8 +1270,9 @@ class Terminal(Gtk.VBox):
         widgetsrc = data.terminator.terminals[int(selection_data.get_data())]
         srcvte = Gtk.drag_get_source_widget(drag_context)
         # check if computation requireds
-        if (isinstance(srcvte, Gtk.EventBox) and
-                srcvte == self.titlebar) or srcvte == widget:
+        # if (isinstance(srcvte, Gtk.EventBox) and
+        #        srcvte == self.titlebar) or srcvte == widget:
+        if (isinstance(srcvte, Gtk.EventBox)) or srcvte == widget:
             return
 
         srchbox = widgetsrc
@@ -1379,16 +1383,16 @@ class Terminal(Gtk.VBox):
 
     def on_window_focus_out(self):
         """Update our UI when the window loses focus"""
-        self.titlebar.update('window-focus-out')
+        # self.titlebar.update('window-focus-out')
 
     def scrollbar_jump(self, position):
         """Move the scrollbar to a particular row"""
-        self.scrollbar.set_value(position)
+        # self.scrollbar.set_value(position)
 
     def on_search_done(self, _widget):
         """We've finished searching, so clean up"""
-        self.searchbar.hide()
-        self.scrollbar.set_value(self.vte.get_cursor_position()[1])
+        # self.searchbar.hide()
+        # self.scrollbar.set_value(self.vte.get_cursor_position()[1])
         self.vte.grab_focus()
 
     def on_edit_done(self, _widget):
@@ -1408,8 +1412,8 @@ class Terminal(Gtk.VBox):
         self.on_vte_size_allocate(widget, allocation)
 
     def on_vte_size_allocate(self, widget, allocation):
-        self.titlebar.update_terminal_size(self.vte.get_column_count(),
-                self.vte.get_row_count())
+        # self.titlebar.update_terminal_size(self.vte.get_column_count(),
+        #        self.vte.get_row_count())
         if self.config['geometry_hinting']:
             window = self.get_toplevel()
             window.deferred_set_rough_geometry_hints()
@@ -1425,7 +1429,7 @@ class Terminal(Gtk.VBox):
             sloppy = self.config.get_system_focus() in ['sloppy', 'mouse']
         elif self.config['focus'] in ['sloppy', 'mouse']:
             sloppy = True
-        if sloppy and self.titlebar.editing() == False:
+        if sloppy: # and self.titlebar.editing() == False:
             term.grab_focus()
             return False
 
@@ -1497,7 +1501,7 @@ class Terminal(Gtk.VBox):
 
     def held_open(self, widget=None, respawn=False, debugserver=False):
         self.is_held_open = True
-        self.titlebar.update()
+        # self.titlebar.update()
 
     def spawn_child(self, widget=None, respawn=False, debugserver=False, init_command=None):
         args = []
@@ -1610,7 +1614,7 @@ class Terminal(Gtk.VBox):
 
         self.command = shell
 
-        self.titlebar.update()
+        # self.titlebar.update()
 
         if self.pid == -1:
             self.vte.feed(_('Unable to start shell:') + shell)
@@ -1754,8 +1758,8 @@ class Terminal(Gtk.VBox):
             window = self.get_toplevel()
             if window.is_toplevel():
                 window.set_urgency_hint(True)
-        if self.config['icon_bell']:
-            self.titlebar.icon_bell()
+        # if self.config['icon_bell']:
+        #    self.titlebar.icon_bell()
         if self.config['visible_bell']:
             # Repurposed the code used for drag and drop overlay to provide a visual terminal flash
             alloc = widget.get_allocation()
@@ -1796,7 +1800,7 @@ class Terminal(Gtk.VBox):
         if layout != "default":
             # There's no point explicitly noting default profiles
             layout['profile'] = profile
-        title = self.titlebar.get_custom_string()
+        # title = self.titlebar.get_custom_string()
         if title:
             layout['title'] = title
         layout['uuid'] = self.uuid
@@ -1816,11 +1820,12 @@ class Terminal(Gtk.VBox):
             if layout['profile'] in self.config.list_profiles():
                 self.set_profile(self, layout['profile'])
         if 'group' in layout and layout['group'] != '':
+            pass
             # This doesn't need/use self.titlebar, but it's safer than sending
             # None
-            self.really_create_group(self.titlebar, layout['group'])
-        if 'title' in layout and layout['title'] != '':
-            self.titlebar.set_custom_string(layout['title'])
+            # self.really_create_group(self.titlebar, layout['group'])
+        # if 'title' in layout and layout['title'] != '':
+        #    self.titlebar.set_custom_string(layout['title'])
         if 'directory' in layout and layout['directory'] != '':
             self.directory = layout['directory']
         if 'uuid' in layout and layout['uuid'] != '':
@@ -1877,13 +1882,15 @@ class Terminal(Gtk.VBox):
         self.paste_clipboard(True)
 
     def key_toggle_scrollbar(self):
-        self.do_scrollbar_toggle()
+        pass
+        # self.do_scrollbar_toggle()
 
     def key_zoom_normal(self):
         self.zoom_orig ()
 
     def key_search(self):
-        self.searchbar.start_search()
+        pass 
+        # self.searchbar.start_search()
 
     # bindings that should be moved to Terminator as they all just call
     # a function of Terminator. It would be cleaner if TerminatorTerm
@@ -2013,7 +2020,8 @@ class Terminal(Gtk.VBox):
         self.vte.reset (True, True)
 
     def key_create_group(self):
-        self.titlebar.create_group()
+        pass
+        # self.titlebar.create_group()
 
     def key_group_all(self):
         self.emit('group-all')
@@ -2112,7 +2120,8 @@ class Terminal(Gtk.VBox):
         label.edit()
 
     def key_edit_terminal_title(self):
-        self.titlebar.label.edit()
+        pass 
+        # self.titlebar.label.edit()
 
     def key_layout_launcher(self):
         LAYOUTLAUNCHER=LayoutLauncher()
