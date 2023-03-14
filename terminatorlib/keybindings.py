@@ -37,10 +37,9 @@ class Keybindings:
         'control':  Gdk.ModifierType.CONTROL_MASK,
         'primary':  Gdk.ModifierType.CONTROL_MASK,
         'shift':    Gdk.ModifierType.SHIFT_MASK,
-        'alt':      Gdk.ModifierType.MOD1_MASK,
+        'alt':      Gdk.ModifierType.ALT_MASK,
         'super':    Gdk.ModifierType.SUPER_MASK,
-        'hyper':    Gdk.ModifierType.HYPER_MASK,
-        'mod2':	    Gdk.ModifierType.MOD2_MASK
+        'hyper':    Gdk.ModifierType.HYPER_MASK
     }
 
     empty = {}
@@ -49,7 +48,10 @@ class Keybindings:
     _lookup = None
 
     def __init__(self):
-        self.keymap = Gdk.Keymap.get_default()
+        # self.keymap = Gdk.Keymap.get_default()
+        self.d = Gdk.Display.get_default()
+        self.seat = self.d.get_default_seat()
+        self.keymap = Gdk.Seat.get_keyboard(self.seat)
         self.configure({})
 
     def configure(self, bindings):
