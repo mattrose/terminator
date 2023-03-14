@@ -120,13 +120,23 @@ class Window(Container, Gtk.Window):
 
     def register_callbacks(self):
         """Connect the GTK+ signals we care about"""
-        self.connect('key-press-event', self.on_key_press)
-        self.connect('button-press-event', self.on_button_press)
-        self.connect('delete_event', self.on_delete_event)
+        evk = Gtk.EventControllerKey.new()
+        evk.connect("key-pressed", self.on_key_press)
+        self.add_controller(evk)
+        evm = Gtk.GestureClick.new()
+        evm.connect("pressed", self.on_button_press)  # could be "released"
+        self.add_controller(evm)
+        # self.connect('key-press-event', self.on_key_press)
+        # self.connect('button-press-event', self.on_button_press)
+        # self.connect('delete_event', self.on_delete_event)
         self.connect('destroy', self.on_destroy_event)
-        self.connect('window-state-event', self.on_window_state_changed)
-        self.connect('focus-out-event', self.on_focus_out)
-        self.connect('focus-in-event', self.on_focus_in)
+        # self.connect('window-state-event', self.on_window_state_changed)
+        evf = Gtk.EventControllerFocus.new()
+        evf.connect('leave', self.on_focus_out)
+        evf.connect('enter', self.on_focus_in)
+        self.add_controller(evf)
+        # self.connect('focus-out-event', self.on_focus_out)
+        # self.connect('focus-in-event', self.on_focus_in)
 
         # Attempt to grab a global hotkey for hiding the window.
         # If we fail, we'll never hide the window, iconifying instead.
@@ -141,7 +151,8 @@ class Window(Container, Gtk.Window):
 
                 if not self.hidebound:
                     err('Unable to bind hide_window key, another instance/window has it.')
-                    self.hidefunc = self.iconify
+                    #self.hidefunc = self.iconify
+                    self.hidefunc = self.minimize
                 else:
                     self.hidefunc = self.hide
 
@@ -180,7 +191,7 @@ class Window(Container, Gtk.Window):
 
     def apply_icon(self, requested_icon):
         """Set the window icon"""
-        icon_theme = Gtk.IconTheme.get_default()
+        icon_theme = Gtk.IconTheme.get_for_display(Gdk.Display.get_default())
         icon_name_list = [APP_NAME]   # disable self.wmclass_name, n/a in GTK3
 
         if requested_icon:
@@ -194,14 +205,14 @@ class Window(Container, Gtk.Window):
 
         for icon_name in icon_name_list:
             # Test if the icon is available first
-            if icon_theme.lookup_icon(icon_name, 48, 0):
+            if icon_theme.lookup_icon(icon_name, None, 48, 0, 0, Gtk.IconLookupFlags.PRELOAD):
                 self.set_icon_name(icon_name)
                 return # Success! We're done.
             else:
                 dbg('Unable to load %s icon' % (icon_name))
 
-        icon = self.render_icon(Gtk.STOCK_DIALOG_INFO, Gtk.IconSize.BUTTON)
-        self.set_icon(icon)
+        #icon = self.render_icon(Gtk.STOCK_DIALOG_INFO, Gtk.IconSize.BUTTON)
+        #self.set_icon(icon)
 
     def on_key_press(self, window, event):
         """Handle a keyboard event"""
@@ -382,7 +393,8 @@ class Window(Container, Gtk.Window):
 
     def set_always_on_top(self, value):
         """Set the always on top window hint from the supplied value"""
-        self.set_keep_above(value)
+        pass
+        # self.set_keep_above(value)
 
     def set_sticky(self, value):
         """Set the sticky hint from the supplied value"""
@@ -391,15 +403,17 @@ class Window(Container, Gtk.Window):
 
     def set_real_transparency(self, value=True):
         """Enable RGBA if supported on the current screen"""
-        if self.is_composited() == False:
-            value = False
+        pass
+        # screen = Gdk.Display.get_default()
+        # if screen.is_composited() == False:
+        #    value = False
 
-        screen = self.get_screen()
-        if value:
-            dbg('setting rgba visual')
-            visual = screen.get_rgba_visual()
-            if visual:
-                self.set_visual(visual)
+        # screen2 = screen.get_screen()
+        #if value:
+        #    dbg('setting rgba visual')
+        #    visual = screen.get_rgba_visual()
+        #    if visual:
+        #        self.set_visual(visual)
     
     def show(self, startup=False):
         """Undo the startup show request if started in hidden mode"""
