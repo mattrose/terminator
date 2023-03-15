@@ -141,7 +141,9 @@ class Terminal(Gtk.Box):
 
         self.cwd = get_pid_cwd()
         self.origcwd = self.terminator.origcwd
-        self.clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
+        # self.clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
+        d = Gdk.Display.get_default()
+        self.clipboard = d.get_clipboard()
 
         self.pending_on_vte_size_allocate = False
 
@@ -279,9 +281,9 @@ class Terminal(Gtk.Box):
         # self.scrollbar = Gtk.Scrollbar.new(Gtk.Orientation.VERTICAL, adjustment=self.vte.get_vadjustment())
         # self.scrollbar.set_no_show_all(True)
 
-        terminalbox.pack_start(self.vte, True, True, 0)
+        terminalbox.prepend(self.vte)
         # terminalbox.pack_start(self.scrollbar, False, True, 0)
-        terminalbox.show_all()
+        # terminalbox.show_all()
 
         return(terminalbox)
 
@@ -392,13 +394,21 @@ class Terminal(Gtk.Box):
 
         # self.scrollbar.connect('button-press-event', self.on_buttonpress)
 
-        self.cnxids.new(self.vte, 'key-press-event', self.on_keypress)
-        self.cnxids.new(self.vte, 'button-press-event', self.on_buttonpress)
-        self.cnxids.new(self.vte, 'scroll-event', self.on_mousewheel)
-        self.cnxids.new(self.vte, 'popup-menu', self.popup_menu)
+        evk = Gtk.EventControllerKey.new()
+        evk.connect("key-pressed", self.on_keypress)
+        self.vte.add_controller(evk)
+        evm = Gtk.GestureClick.new()
+        evm.connect("pressed", self.on_buttonpress)  # could be "released"
+        self.vte.add_controller(evm)
+        #self.cnxids.new(self.vte, 'key-press-event', self.on_keypress)
+        #self.cnxids.new(self.vte, 'button-press-event', self.on_buttonpress)
+        #self.cnxids.new(self.vte, 'scroll-event', self.on_mousewheel)
+        #self.cnxids.new(self.vte, 'popup-menu', self.popup_menu)
 
-        srcvtetargets = [("vte", Gtk.TargetFlags.SAME_APP, self.TARGET_TYPE_VTE)]
-        dsttargets = [("vte", Gtk.TargetFlags.SAME_APP, self.TARGET_TYPE_VTE),
+        srcvtetargets = [("vte", self.TARGET_TYPE_VTE)]
+        dsttargets = [("vte", self.TARGET_TYPE_VTE),
+        #srcvtetargets = [("vte", Gtk.TargetFlags.SAME_APP, self.TARGET_TYPE_VTE)]
+        #dsttargets = [("vte", Gtk.TargetFlags.SAME_APP, self.TARGET_TYPE_VTE),
                       ('text/x-moz-url', 0, self.TARGET_TYPE_MOZ),
                       ('_NETSCAPE_URL', 0, 0)]
         '''
@@ -422,47 +432,48 @@ class Terminal(Gtk.Box):
                            ('COMPOUND_TEXT', 0, 0),
                            ('text/uri-list', 0, 0)])
         # Convert to target entries
-        srcvtetargets = [Gtk.TargetEntry.new(*tgt) for tgt in srcvtetargets]
-        dsttargets = [Gtk.TargetEntry.new(*tgt) for tgt in dsttargets]
+        # srcvtetargets = [Gtk.TargetEntry.new(*tgt) for tgt in srcvtetargets]
+        # dsttargets = [Gtk.TargetEntry.new(*tgt) for tgt in dsttargets]
 
         dbg('Finalised drag targets: %s' % dsttargets)
 
-        for (widget, mask) in [
-            (self.vte, Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.BUTTON3_MASK),
+        ### Fix DnD later
+        # for (widget, mask) in [
+        #    (self.vte, Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.BUTTON3_MASK),
             # (self.titlebar, Gdk.ModifierType.BUTTON1_MASK)
-            ]:
-            widget.drag_source_set(mask, srcvtetargets, Gdk.DragAction.MOVE)
+        #    ]:
+        #    widget.drag_source_set(mask, srcvtetargets, Gdk.DragAction.MOVE)
 
-        self.vte.drag_dest_set(Gtk.DestDefaults.MOTION |
-                Gtk.DestDefaults.HIGHLIGHT | Gtk.DestDefaults.DROP,
-                dsttargets, Gdk.DragAction.COPY | Gdk.DragAction.MOVE)
+        # self.vte.drag_dest_set(Gtk.DestDefaults.MOTION |
+        #        Gtk.DestDefaults.HIGHLIGHT | Gtk.DestDefaults.DROP,
+        #        dsttargets, Gdk.DragAction.COPY | Gdk.DragAction.MOVE)
 
         #for widget in [self.vte, self.titlebar]:
-        for widget in [self.vte]:
-            self.cnxids.new(widget, 'drag-begin', self.on_drag_begin, self)
-            self.cnxids.new(widget, 'drag-data-get', self.on_drag_data_get,
-            self)
+        #for widget in [self.vte]:
+        #    self.cnxids.new(widget, 'drag-begin', self.on_drag_begin, self)
+        #    self.cnxids.new(widget, 'drag-data-get', self.on_drag_data_get,
+        #    self)
 
-        self.cnxids.new(self.vte, 'drag-motion', self.on_drag_motion, self)
-        self.cnxids.new(self.vte, 'drag-data-received',
-            self.on_drag_data_received, self)
+        #self.cnxids.new(self.vte, 'drag-motion', self.on_drag_motion, self)
+        #self.cnxids.new(self.vte, 'drag-data-received',
+        #    self.on_drag_data_received, self)
 
-        self.cnxids.new(self.vte, 'selection-changed',
-            lambda widget: self.maybe_copy_clipboard())
+        #self.cnxids.new(self.vte, 'selection-changed',
+        #    lambda widget: self.maybe_copy_clipboard())
 
-        if self.composite_support:
-            self.cnxids.new(self.vte, 'composited-changed', self.reconfigure)
+        #if self.composite_support:
+        #    self.cnxids.new(self.vte, 'composited-changed', self.reconfigure)
 
         self.cnxids.new(self.vte, 'window-title-changed', lambda x:
             self.emit('title-change', self.get_window_title()))
-        self.cnxids.new(self.vte, 'grab-focus', self.on_vte_focus)
-        self.cnxids.new(self.vte, 'focus-in-event', self.on_vte_focus_in)
-        self.cnxids.new(self.vte, 'focus-out-event', self.on_vte_focus_out)
-        self.cnxids.new(self.vte, 'size-allocate', self.deferred_on_vte_size_allocate)
+        #self.cnxids.new(self.vte, 'grab-focus', self.on_vte_focus)
+        #self.cnxids.new(self.vte, 'focus-in-event', self.on_vte_focus_in)
+        #self.cnxids.new(self.vte, 'focus-out-event', self.on_vte_focus_out)
+        #self.cnxids.new(self.vte, 'size-allocate', self.deferred_on_vte_size_allocate)
 
-        self.vte.add_events(Gdk.EventMask.ENTER_NOTIFY_MASK)
-        self.cnxids.new(self.vte, 'enter_notify_event',
-            self.on_vte_notify_enter)
+        #self.vte.add_events(Gdk.EventMask.ENTER_NOTIFY_MASK)
+        #self.cnxids.new(self.vte, 'enter_notify_event',
+        #    self.on_vte_notify_enter)
 
         self.cnxids.new(self.vte, 'realize', self.reconfigure)
 
