@@ -205,11 +205,11 @@ class Window(Container, Gtk.Window):
 
         for icon_name in icon_name_list:
             # Test if the icon is available first
-            if icon_theme.lookup_icon(icon_name, None, 48, 0, 0, Gtk.IconLookupFlags.PRELOAD):
-                self.set_icon_name(icon_name)
-                return # Success! We're done.
-            else:
-                dbg('Unable to load %s icon' % (icon_name))
+            #if icon_theme.lookup_icon(icon_name, None, 48, 0, 0, Gtk.IconLookupFlags.PRELOAD):
+            self.set_icon_name(icon_name)
+            return # Success! We're done.
+            #else:
+            #    dbg('Unable to load %s icon' % (icon_name))
 
         #icon = self.render_icon(Gtk.STOCK_DIALOG_INFO, Gtk.IconSize.BUTTON)
         #self.set_icon(icon)

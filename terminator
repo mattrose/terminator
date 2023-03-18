@@ -135,7 +135,8 @@ if __name__ == '__main__':
         TERMINATOR.debug_address = DEBUGSVR.server_address
 
     try:
-        Gtk.main()
+        while Gtk.Window.get_toplevels().get_n_items() > 0:
+	        GLib.MainContext.default().iteration(True)
     except KeyboardInterrupt:
         pass
 

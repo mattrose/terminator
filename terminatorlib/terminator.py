@@ -208,8 +208,10 @@ class Terminator(Borg):
         if profile and self.config['always_split_with_profile']:
             terminal.force_set_profile(None, profile)
         window.add(terminal)
-        window.show(True)
+        window.present()
+
         terminal.spawn_child()
+        
 
         return(window, terminal)
 
