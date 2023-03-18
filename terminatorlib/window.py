@@ -432,10 +432,7 @@ class Window(Container, Gtk.Window):
     def add(self, widget, metadata=None):
         """Add a widget to the window by way of Gtk.Window.add()"""
         maker = Factory()
-        #w = Gtk.Window.new()
-        #self.set_child(w)
         self.set_child(widget)
-        # Gtk.ApplicationWindow.add(self, widget)
         if maker.isinstance(widget, 'Terminal'):
             signals = {'close-term': self.closeterm,
                        'title-change': self.title.set_title,
