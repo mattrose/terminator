@@ -12,7 +12,7 @@ from .terminator import Terminator
 from .config import Config
 from .factory import Factory
 from .container import Container
-from .editablelabel import EditableLabel
+# from .editablelabel import EditableLabel
 from .translation import _
 from .util import err, dbg, enumerate_descendants, make_uuid
 
@@ -597,7 +597,7 @@ class TabLabel(Gtk.HBox):
 
         self.connect("button-press-event", self.on_button_pressed)
 
-        self.label = EditableLabel(title)
+        # self.label = EditableLabel(title)
         self.update_angle()
 
         self.pack_start(self.label, True, True, 0)

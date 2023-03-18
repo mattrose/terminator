@@ -12,7 +12,7 @@ from .translation import _
 from .signalman import Signalman
 
 # pylint: disable-msg=R0921
-class Container(object):
+class Container():
     """Base class for Terminator Containers"""
 
     terminator = None
