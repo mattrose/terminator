@@ -573,7 +573,7 @@ class Notebook(Container, Gtk.Notebook):
                     self.prev_page()
         return True
 
-class TabLabel(Gtk.HBox):
+class TabLabel(Gtk.Box):
     """Class implementing a label widget for Notebook tabs"""
     notebook = None
     terminator = None
