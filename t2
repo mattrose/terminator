@@ -1,0 +1,29 @@
+import gi
+import sys
+gi.require_version('Gtk','4.0')
+from gi.repository import Gtk, Gdk, GLib, Adw
+import terminatorlib.optionparse
+from terminatorlib.terminator import Terminator
+from terminatorlib.factory import Factory
+from terminatorlib.version import APP_NAME, APP_VERSION
+from terminatorlib.util import dbg, err
+from terminatorlib.layoutlauncher import LayoutLauncher
+from terminatorlib.configjson import ConfigJson
+
+class MyApp(Adw.Application):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.connect('activate', self.on_activate)
+        self
+    def on_activate(self, app):
+        TERMINATOR = Terminator()
+        OPTIONS = terminatorlib.optionparse.parse_options()[0]
+        OPTIONS.debug = 1
+        MAKER = Factory()
+        TERMINATOR.reconfigure()
+        self.win,self.term = TERMINATOR.new_window()
+        self.win.present()
+
+app = MyApp(application_id="com.example.GtkApplication")
+app.run(sys.argv)
+
