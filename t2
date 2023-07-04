@@ -14,15 +14,15 @@ class MyApp(Adw.Application):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.connect('activate', self.on_activate)
-        self
+        
     def on_activate(self, app):
         TERMINATOR = Terminator()
         OPTIONS = terminatorlib.optionparse.parse_options()[0]
         OPTIONS.debug = 1
         MAKER = Factory()
         TERMINATOR.reconfigure()
-        self.win,self.term = TERMINATOR.new_window()
-        self.win.present()
+        
+        
 
 app = MyApp(application_id="com.example.GtkApplication")
 app.run(sys.argv)

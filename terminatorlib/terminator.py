@@ -207,10 +207,10 @@ class Terminator(Borg):
             terminal.set_cwd(cwd)
         if profile and self.config['always_split_with_profile']:
             terminal.force_set_profile(None, profile)
-        window.add(terminal)
-        window.present()
 
         terminal.spawn_child()
+        window.set_child(terminal)
+        window.present()
         
 
         return(window, terminal)
@@ -439,7 +439,9 @@ class Terminator(Borg):
             css += template % (munged_profile, bgcolor, bgalpha)
 
         style_provider = Gtk.CssProvider()
-        style_provider.load_from_data(css.encode('utf-8'))
+        # print(type(css))
+        style_provider.load_from_data(css,-1)
+        # style_provider.load_from_data(css)
         self.style_providers.append(style_provider)
 
         # Attempt to load some theme specific stylistic tweaks for appearances
@@ -483,7 +485,7 @@ class Terminator(Borg):
                 }
                 """ % (self.config['handle_size'],self.config['handle_size'])
         style_provider = Gtk.CssProvider()
-        style_provider.load_from_data(css.encode('utf-8'))
+        style_provider.load_from_data(css,-1)
         self.style_providers.append(style_provider)
 
         # Apply the providers, incrementing priority so they don't cancel out

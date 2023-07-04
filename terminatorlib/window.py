@@ -34,7 +34,7 @@ from .terminator import Terminator
 # hide_window shortcut will be unavailable')
 
 # pylint: disable-msg=R0904
-class Window(Container, Gtk.Window):
+class Window(Container,Gtk.Window):
     """Class implementing a top-level Terminator window"""
 
     terminator = None

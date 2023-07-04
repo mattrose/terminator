@@ -157,7 +157,8 @@ class Terminal(Gtk.Box):
             self.composite_support = True
         dbg('composite_support: %s' % self.composite_support)
 
-        self.vte.show()
+        # self.vte.show()
+        self.append(self.vte)
         self.update_url_matches()
 
         self.terminalbox = self.create_terminalbox()
@@ -173,7 +174,7 @@ class Terminal(Gtk.Box):
         # self.searchbar = Searchbar()
         # self.searchbar.connect('end-search', self.on_search_done)
 
-        self.show()
+        # self.show()
         # if self.config['title_at_bottom']:
         #    self.pack_start(self.terminalbox, True, True, 0)
         #    self.pack_start(self.titlebar, False, True, 0)
