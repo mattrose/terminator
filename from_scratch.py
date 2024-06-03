@@ -1,3 +1,7 @@
+#!/usr/bin/python
+
+### Next on the list.
+# How to make the terminal box widen when the application window widens
 import sys
 import gi
 gi.require_version('Gtk', '4.0')
@@ -11,13 +15,14 @@ class Window(Gtk.ApplicationWindow):
         super().__init__(*args, **kwargs)
         # Things will go here
         self.term_container = TerminalContainer()
+        tb = TerminalBox()
         self.set_child(self.term_container)
         self.header = Gtk.HeaderBar()
         self.set_titlebar(self.header)
 
         # Create a new "Action"
         action = Gio.SimpleAction.new("something", None)
-        action.connect("activate", self.print_something)
+        action.connect("activate", tb.print_something)
         self.add_action(action)  # Here the action is being added to the window, but you could add it to the
                                  # application or an "ActionGroup"
 
@@ -38,11 +43,6 @@ class Window(Gtk.ApplicationWindow):
         # Add menu button to the header bar
         self.header.pack_start(self.hamburger)
 
-    def print_something(self, action, param):
-        print("Something!")
-
-
-
 class MyApp(Adw.Application):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -58,20 +58,41 @@ class TerminalContainer(Gtk.Box):
         self.terminal_box = TerminalBox()
         self.append(self.terminal_box)
 
-class TerminalBox(Gtk.Box):
+class TerminalBox(Gtk.Paned):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.terminal = Terminal()
-        self.append(self.terminal)
+        # self.append(self.terminal)
+        self.terminal2 = Terminal()
+        self.set_start_child(self.terminal)
+        # self.set_resize_start_child(True)
+        self.set_shrink_start_child(True)
+        self.set_end_child(self.terminal2)
+        # self.set_resize_end_child(True)
+        self.set_shrink_end_child(True)
 
+    def print_something(self, action, param):
+        print("Something!")
+        print(self.terminal.get_size())
+"""
+        self.set_start_child(self.terminal)
+        self.set_end_child(self.terminal2)
+        self.set_resize_end_child(True)
+        self.set_shrink_end_child(True)
+        print("Something!")
+"""   
 class Terminal(Gtk.Box):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.set_hexpand(True)
         self.vte = Vte.Terminal()
+        self.vte.set_hexpand(True)
+        # self.vte.set_size(80,25)
+        args = ["/bin/bash"]
         self.pid = self.vte.spawn_async(
                 Vte.PtyFlags.DEFAULT,
                 None,
-                ["/bin/bash"],
+                args,
                 None,
                 0,
                 None,
