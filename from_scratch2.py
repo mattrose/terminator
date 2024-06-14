@@ -14,7 +14,7 @@ class Window(Gtk.ApplicationWindow):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Things will go here
-        self.term_container = TerminalContainer()
+        self.term_container = TerminalBox()
         self.header = Gtk.HeaderBar()
         self.set_titlebar(self.header)
 
@@ -24,9 +24,15 @@ class Window(Gtk.ApplicationWindow):
         self.add_action(action)  # Here the action is being added to the window, but you could add it to the
                                  # application or an "ActionGroup"
 
+        action = Gio.SimpleAction.new("split_vert", None)
+        action.connect("activate", self.term_container.split_vert)
+        self.add_action(action)  # Here the action is being added to the window, but you could add it to the
+                                 # application or an "ActionGroup"        
         # Create a new menu, containing that action
         menu = Gio.Menu.new()
-        menu.append("Do Something", "win.something")  # Or you would do app.something if you had attached the
+        menu.append("Split Horizontally", "win.something")  # Or you would do app.something if you had attached the
+                                                      # action to the application
+        menu.append("Split Vertically", "win.split_vert")  # Or you would do app.something if you had attached the
                                                       # action to the application
 
         # Create a popover
@@ -40,11 +46,9 @@ class Window(Gtk.ApplicationWindow):
 
         # Add menu button to the header bar
         self.header.pack_start(self.hamburger)
-
-    def add_container(self):
+    #def add_container(self):
         self.term_container.new()
         self.set_child(self.term_container)
-
 
 class MyApp(Adw.Application):
     def __init__(self, **kwargs):
@@ -53,30 +57,52 @@ class MyApp(Adw.Application):
 
     def on_activate(self, app):
         self.win = Window(application=app)
-        self.win.add_container()
+        # self.win.add_container()
         self.win.present()
 
-class TerminalContainer(Gtk.Box):
+class TerminalBox(Gtk.Box):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.children = []
+        # self.container = None
+        self.container = TerminalContainer()
+    def new(self):
+        # self.container = TerminalContainer()
+        self.container.new()
+        self.append(self.container)
+    def split_horiz(self,action,params):
+        self.container.split_horiz()
+
+    def split_vert(self,action,params):
+        self.container.split_vert()
+
+class TerminalContainer(Gtk.Paned):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.children = []
         self.terminal = None
+
     def new(self):
         self.terminal = Terminal()
         self.terminal.create_term()
-        self.append(self.terminal)
+        self.set_start_child(self.terminal)
+        self.children.append(self.terminal)
 
-    def split_horiz(self,action,params):
-        print(self.terminal)
-        # self.terminal.set_visible(False)
-        self.remove(self.terminal)
-        paned = Gtk.Paned.new(Gtk.Orientation.HORIZONTAL)
-        paned.set_start_child(self.terminal)
+    def split_horiz(self):#,action,params):
         self.t2 = Terminal()
         self.t2.create_term()
-        paned.set_end_child(self.t2)
-        self.append(paned)
-        # self.append(self.terminal_box.split())
+        self.set_end_child(self.t2)
+
+    def split_vert(self):#,action,params):
+        self.t2 = Terminal()
+        self.t2.create_term()
+        self.set_end_child(self.t2)
+
+    def create_paned(o,term):
+        paned = GTK.Paned.new(o)
+        if len(self.children): 
+            self.remove(term)
+        
 
 class Terminal(Gtk.Box):
     def __init__(self, *args, **kwargs):
@@ -87,6 +113,7 @@ class Terminal(Gtk.Box):
     def create_term(self):
         # self.vte.set_size(80,25)
         self.vte = Vte.Terminal()
+        self.vte.set_hexpand(True)
         args = ["/bin/bash"]
         self.pid = self.vte.spawn_async(
                 Vte.PtyFlags.DEFAULT,
