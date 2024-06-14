@@ -94,6 +94,7 @@ class TerminalContainer(Gtk.Paned):
         self.set_end_child(self.t2)
 
     def split_vert(self):#,action,params):
+        self.set_orientation(Gtk.Orientation.VERTICAL)
         self.t2 = Terminal()
         self.t2.create_term()
         self.set_end_child(self.t2)
@@ -128,12 +129,9 @@ class Terminal(Gtk.Box):
                 None,
                 None,
             )
-        print(self.pid)
         self.append(self.vte)
     def remove_term(self):
         self.remove(self.vte)
-        if self.pid:
-            print(self.pid)
         return self
 
 app = MyApp(application_id="com.example.GtkApplication")
