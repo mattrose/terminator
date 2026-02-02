@@ -31,6 +31,24 @@ jobs:
           python3 -m pip install --upgrade pip
           python3 -m pip install pytest psutil configobj
 
+      - name: Diagnostics: verify runtime imports
+        run: |
+          echo "-- python info --"
+          python3 -c "import sys,sysconfig; print(sys.executable); print(sys.version); print('\n'.join(sys.path))"
+          echo "\n-- pip list --"
+          python3 -m pip list
+          echo "\n-- import smoke tests --"
+          python3 - <<'PY'
+import sys
+mods = ('gi','cairo','psutil','configobj')
+for m in mods:
+    try:
+        __import__(m)
+        print(m, 'OK')
+    except Exception as e:
+        print(m, 'FAILED:', type(e).__name__, e)
+PY
+
       - name: Run tests under Xvfb (system python)
         run: |
           xvfb-run -s "-screen 0 1280x1024x24" python3 -m pytest -q
