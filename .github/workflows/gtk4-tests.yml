@@ -31,7 +31,7 @@ jobs:
           python3 -m pip install --upgrade pip
           python3 -m pip install pytest psutil configobj
 
-      - name: Diagnostics: verify runtime imports
+      - name: Diagnostics verify runtime import
         run: |
           echo "-- python info --"
           python3 -c "import sys,sysconfig; print(sys.executable); print(sys.version); print('\n'.join(sys.path))"
