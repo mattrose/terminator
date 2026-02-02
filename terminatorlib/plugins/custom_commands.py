@@ -262,15 +262,9 @@ class CustomCommandsMenu(plugin.MenuItem):
 
     def configure(self, widget, data = None):
       ui = {}
-      dbox = Gtk.Dialog(
-                      _("Custom Commands Configuration"),
-                      None,
-                      Gtk.DialogFlags.MODAL,
-                      (
-                        _("_Cancel"), Gtk.ResponseType.REJECT,
-                        _("_OK"), Gtk.ResponseType.ACCEPT
-                      )
-                    )
+      dbox = Gtk.Dialog(_("Custom Commands Configuration"), transient_for=widget.get_toplevel() if widget else None, modal=True)
+      dbox.add_button(_("_Cancel"), Gtk.ResponseType.REJECT)
+      dbox.add_button(_("_OK"), Gtk.ResponseType.ACCEPT)
       if widget:
         dbox.set_transient_for(widget.get_toplevel())
 
@@ -279,8 +273,7 @@ class CustomCommandsMenu(plugin.MenuItem):
         dbox.set_icon_name('terminator-custom-commands')
       else:
         dbg('Unable to load Terminator custom command icon')
-        icon = dbox.render_icon(Gtk.STOCK_DIALOG_INFO, Gtk.IconSize.BUTTON)
-        dbox.set_icon(icon)
+        dbox.set_icon_name('dialog-information')
 
       store = self.setup_store()
 
@@ -309,59 +302,71 @@ class CustomCommandsMenu(plugin.MenuItem):
       scroll_window.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
       scroll_window.add_with_viewport(treeview)
 
-      hbox = Gtk.HBox()
-      hbox.pack_start(scroll_window, True, True, 0)
-      dbox.vbox.pack_start(hbox, True, True, 0)
+      hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+      hbox.append(scroll_window)
+      hbox.set_child_packing(scroll_window, True, True, 0, Gtk.PackType.START)
+      content = dbox.get_content_area()
+      content.append(hbox)
+      content.set_child_packing(hbox, True, True, 0, Gtk.PackType.START)
 
-      button_box = Gtk.VBox()
+      button_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
 
       button = Gtk.Button(_("Top"))
-      button_box.pack_start(button, False, True, 0)
+      button_box.append(button)
+      button_box.set_child_packing(button, False, True, 0, Gtk.PackType.START)
       button.connect("clicked", self.on_goto_top, ui) 
       button.set_sensitive(False)
       ui['button_top'] = button
 
       button = Gtk.Button(_("Up"))
-      button_box.pack_start(button, False, True, 0)
+      button_box.append(button)
+      button_box.set_child_packing(button, False, True, 0, Gtk.PackType.START)
       button.connect("clicked", self.on_go_up, ui)
       button.set_sensitive(False)
       ui['button_up'] = button
 
       button = Gtk.Button(_("Down"))
-      button_box.pack_start(button, False, True, 0)
-      button.connect("clicked", self.on_go_down, ui) 
+      button_box.append(button)
+      button_box.set_child_packing(button, False, True, 0, Gtk.PackType.START)
+      button.connect("clicked", self.on_go_down, ui)
       button.set_sensitive(False)
       ui['button_down'] = button
 
       button = Gtk.Button(_("Last"))
-      button_box.pack_start(button, False, True, 0)
-      button.connect("clicked", self.on_goto_last, ui) 
+      button_box.append(button)
+      button_box.set_child_packing(button, False, True, 0, Gtk.PackType.START)
+      button.connect("clicked", self.on_goto_last, ui)
       button.set_sensitive(False)
       ui['button_last'] = button
 
       button = Gtk.Button(_("New"))
-      button_box.pack_start(button, False, True, 0)
-      button.connect("clicked", self.on_new, ui) 
+      button_box.append(button)
+      button_box.set_child_packing(button, False, True, 0, Gtk.PackType.START)
+      button.connect("clicked", self.on_new, ui)
       ui['button_new'] = button
 
       button = Gtk.Button(_("Edit"))
-      button_box.pack_start(button, False, True, 0)
+      button_box.append(button)
+      button_box.set_child_packing(button, False, True, 0, Gtk.PackType.START)
       button.set_sensitive(False)
-      button.connect("clicked", self.on_edit, ui) 
+      button.connect("clicked", self.on_edit, ui)
       ui['button_edit'] = button
 
       button = Gtk.Button(_("Delete"))
-      button_box.pack_start(button, False, True, 0)
-      button.connect("clicked", self.on_delete, ui) 
+      button_box.append(button)
+      button_box.set_child_packing(button, False, True, 0, Gtk.PackType.START)
+      button.connect("clicked", self.on_delete, ui)
       button.set_sensitive(False)
       ui['button_delete'] = button
 
       button = Gtk.Button(_("Bookmark Last Cmd"))
-      button_box.pack_start(button, False, True, 0)
+      button_box.append(button)
+      button_box.set_child_packing(button, False, True, 0, Gtk.PackType.START)
       button.connect("clicked", self.on_last_exe_cmd, ui)
       ui['button_save_last_cmd'] = button
 
-      hbox.pack_start(button_box, False, True, 0)
+      hbox.append(button_box)
+      hbox.set_child_packing(button_box, False, True, 0, Gtk.PackType.START)
       self.dbox = dbox
       dbox.show_all()
       res = dbox.run()
@@ -416,15 +421,9 @@ class CustomCommandsMenu(plugin.MenuItem):
 
     def _create_command_dialog(self, enabled_var    = False, name_var = "",
                                      name_parse_var = "", command_var = ""):
-      dialog = Gtk.Dialog(
-                        _("New Command"),
-                        None,
-                        Gtk.DialogFlags.MODAL,
-                        (
-                          _("_Cancel"), Gtk.ResponseType.REJECT,
-                          _("_OK"), Gtk.ResponseType.ACCEPT
-                        )
-                      )
+      dialog = Gtk.Dialog(_("New Command"), transient_for=None, modal=True)
+      dialog.add_button(_("_Cancel"), Gtk.ResponseType.REJECT)
+      dialog.add_button(_("_OK"), Gtk.ResponseType.ACCEPT)
 
       #since we call this via shortcut keybinding
       #lets focus on OK button
@@ -468,7 +467,9 @@ class CustomCommandsMenu(plugin.MenuItem):
       command.get_buffer().set_text(command_var)
       table.attach(command, 1, 2, 3, 4)
 
-      dialog.vbox.pack_start(table, True, True, 10)
+      content = dialog.get_content_area()
+      content.append(table)
+      content.set_child_packing(table, True, True, 10, Gtk.PackType.START)
       dialog.show_all()
       return (dialog,enabled,name,name_parse,command)
 
@@ -506,11 +507,10 @@ class CustomCommandsMenu(plugin.MenuItem):
         item['name_parse'] = name_parse.get_active()
         item['command'] = command.get_buffer().get_text(command.get_buffer().get_start_iter(), command.get_buffer().get_end_iter(), True)
         if item['name'] == '' or item['command'] == '':
-          err = Gtk.MessageDialog(dialog,
-                                  Gtk.DialogFlags.MODAL,
-                                  Gtk.MessageType.ERROR,
-                                  Gtk.ButtonsType.CLOSE,
-                                  _("You need to define a name and command")
+          err = Gtk.MessageDialog(transient_for=dialog, modal=True,
+                                  message_type=Gtk.MessageType.ERROR,
+                                  buttons=Gtk.ButtonsType.CLOSE,
+                                  text=_("You need to define a name and command")
                                 )
           err.run()
           err.destroy()
@@ -531,6 +531,7 @@ class CustomCommandsMenu(plugin.MenuItem):
                           item['name_parse'], item['command']))
           else:
             gerr(_("Name *%s* already exist") % item['name'])
+        dialog.destroy()
       dialog.destroy()
 
     def on_goto_top(self, button, data):
@@ -620,11 +621,10 @@ class CustomCommandsMenu(plugin.MenuItem):
         item['name_parse'] = name_parse.get_active()
         item['command'] = command.get_buffer().get_text(command.get_buffer().get_start_iter(), command.get_buffer().get_end_iter(), True)
         if item['name'] == '' or item['command'] == '':
-          err = Gtk.MessageDialog(dialog,
-                                  Gtk.DialogFlags.MODAL,
-                                  Gtk.MessageType.ERROR,
-                                  Gtk.ButtonsType.CLOSE,
-                                  _("You need to define a name and command")
+          err = Gtk.MessageDialog(transient_for=dialog, modal=True,
+                                  message_type=Gtk.MessageType.ERROR,
+                                  buttons=Gtk.ButtonsType.CLOSE,
+                                  text=_("You need to define a name and command")
                                 )
           err.run()
           err.destroy()

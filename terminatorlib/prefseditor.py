@@ -217,8 +217,7 @@ class PrefsEditor:
             self.window.set_icon_name('terminator-preferences')
         else:
             dbg('Unable to load Terminator preferences icon')
-            icon = self.window.render_icon(Gtk.STOCK_DIALOG_INFO, Gtk.IconSize.BUTTON)
-            self.window.set_icon(icon)
+            self.window.set_icon_name('dialog-information')
 
         self.layouteditor = LayoutEditor(self.builder)
         self.builder.connect_signals(self)
@@ -1978,7 +1977,7 @@ class PrefsEditor:
         if duplicate_bindings:
             dialog = Gtk.MessageDialog(
                 transient_for=self.window,
-                flags=Gtk.DialogFlags.MODAL,
+                modal=True,
                 message_type=Gtk.MessageType.ERROR,
                 buttons=Gtk.ButtonsType.CLOSE,
                 text="Duplicate Key Bindings Are Not Allowed",

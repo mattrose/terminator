@@ -28,10 +28,10 @@ import gi
 
 
 try:
-    gi.require_version('Gtk','3.0')
+    gi.require_version('Gtk','4.0')
     from gi.repository import Gtk, Gdk
 except ImportError:
-    print('You need Gtk 3.0+ to run Remotinator.')
+    print('You need Gtk 4.0+ to run Remotinator.')
     sys.exit(1)
 
 # set this to true to enable debugging output
@@ -84,8 +84,8 @@ def gerr(message = None):
     """Display a graphical error. This should only be used for serious
     errors as it will halt execution"""
 
-    dialog = Gtk.MessageDialog(None, Gtk.DialogFlags.MODAL,
-            Gtk.MessageType.ERROR, Gtk.ButtonsType.OK, message)
+    dialog = Gtk.MessageDialog(transient_for=None, modal=True,
+            message_type=Gtk.MessageType.ERROR, buttons=Gtk.ButtonsType.OK, text=message)
     dialog.run()
     dialog.destroy()
 

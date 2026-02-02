@@ -51,8 +51,7 @@ class LayoutLauncher:
             self.window.set_icon_name('terminator-layout')
         else:
             dbg('Unable to load Terminator layout launcher icon')
-            icon = self.window.render_icon(Gtk.STOCK_DIALOG_INFO, Gtk.IconSize.BUTTON)
-            self.window.set_icon(icon)
+            self.window.set_icon_name('dialog-information')
 
         self.window.set_size_request(250, 300)
         self.builder.connect_signals(self)

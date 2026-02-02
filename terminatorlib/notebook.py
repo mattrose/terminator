@@ -573,7 +573,7 @@ class Notebook(Container, Gtk.Notebook):
                     self.prev_page()
         return True
 
-class TabLabel(Gtk.HBox):
+class TabLabel(Gtk.Box):
     """Class implementing a label widget for Notebook tabs"""
     notebook = None
     terminator = None
@@ -590,6 +590,7 @@ class TabLabel(Gtk.HBox):
     def __init__(self, title, notebook):
         """Class initialiser"""
         GObject.GObject.__init__(self)
+        Gtk.Box.__init__(self, orientation=Gtk.Orientation.HORIZONTAL)
 
         self.notebook = notebook
         self.terminator = Terminator()
@@ -600,7 +601,8 @@ class TabLabel(Gtk.HBox):
         self.label = EditableLabel(title)
         self.update_angle()
 
-        self.pack_start(self.label, True, True, 0)
+        self.append(self.label)
+        self.set_child_packing(self.label, True, True, 0, Gtk.PackType.START)
 
         self.update_button()
         self.show_all()
@@ -651,12 +653,13 @@ class TabLabel(Gtk.HBox):
 #        style.xthickness = 0
 #        style.ythickness = 0
 #        self.button.modify_style(style)
-        self.button.add(self.icon)
+        self.button.set_child(self.icon)
         self.button.connect('clicked', self.on_close)
         self.button.set_name('terminator-tab-close-button')
         if hasattr(self.button, 'set_tooltip_text'):
             self.button.set_tooltip_text(_('Close Tab'))
-        self.pack_start(self.button, False, False, 0)
+        self.append(self.button)
+        self.set_child_packing(self.button, False, False, 0, Gtk.PackType.START)
         self.show_all()
 
     def update_angle(self):

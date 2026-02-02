@@ -201,8 +201,7 @@ class Window(Container, Gtk.Window):
             else:
                 dbg('Unable to load %s icon' % (icon_name))
 
-        icon = self.render_icon(Gtk.STOCK_DIALOG_INFO, Gtk.IconSize.BUTTON)
-        self.set_icon(icon)
+        self.set_icon_name('dialog-information')
 
     def on_key_press(self, window, event):
         """Handle a keyboard event"""
