@@ -192,15 +192,9 @@ class RunCmdOnMatchMenu(plugin.MenuItem):
 
     def configure(self, widget, data = None):
       ui = {}
-      dbox = Gtk.Dialog(
-                      _("Run command on match Configuration"),
-                      None,
-                      Gtk.DialogFlags.MODAL,
-                      (
-                        _("_Cancel"), Gtk.ResponseType.REJECT,
-                        _("_OK"), Gtk.ResponseType.ACCEPT
-                      )
-                    )
+      dbox = Gtk.Dialog(_("Run command on match Configuration"), transient_for=widget.get_toplevel(), modal=True)
+      dbox.add_button(_("_Cancel"), Gtk.ResponseType.REJECT)
+      dbox.add_button(_("_OK"), Gtk.ResponseType.ACCEPT)
       dbox.set_transient_for(widget.get_toplevel())
 
       icon_theme = Gtk.IconTheme.get_default()
@@ -208,8 +202,7 @@ class RunCmdOnMatchMenu(plugin.MenuItem):
         dbox.set_icon_name('terminator-run-cmd-on-match')
       else:
         dbg('Unable to load Terminator run-cmd-on-match icon')
-        icon = dbox.render_icon(Gtk.STOCK_DIALOG_INFO, Gtk.IconSize.BUTTON)
-        dbox.set_icon(icon)
+        dbox.set_icon_name('dialog-information')
 
       store = Gtk.ListStore(bool, str, str)
 
@@ -241,56 +234,67 @@ class RunCmdOnMatchMenu(plugin.MenuItem):
       scroll_window.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
       scroll_window.add_with_viewport(treeview)
 
-      hbox = Gtk.HBox()
-      hbox.pack_start(scroll_window, True, True, 0)
-      dbox.vbox.pack_start(hbox, True, True, 0)
+      hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+      hbox.append(scroll_window)
+      hbox.set_child_packing(scroll_window, True, True, 0, Gtk.PackType.START)
+      content = dbox.get_content_area()
+      content.append(hbox)
+      content.set_child_packing(hbox, True, True, 0, Gtk.PackType.START)
 
-      button_box = Gtk.VBox()
+      button_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
 
       button = Gtk.Button(_("Top"))
-      button_box.pack_start(button, False, True, 0)
+      button_box.append(button)
+      button_box.set_child_packing(button, False, True, 0, Gtk.PackType.START)
       button.connect("clicked", self.on_goto_top, ui)
       button.set_sensitive(False)
       ui['button_top'] = button
 
       button = Gtk.Button(_("Up"))
-      button_box.pack_start(button, False, True, 0)
+      button_box.append(button)
+      button_box.set_child_packing(button, False, True, 0, Gtk.PackType.START)
       button.connect("clicked", self.on_go_up, ui)
       button.set_sensitive(False)
       ui['button_up'] = button
 
       button = Gtk.Button(_("Down"))
-      button_box.pack_start(button, False, True, 0)
+      button_box.append(button)
+      button_box.set_child_packing(button, False, True, 0, Gtk.PackType.START)
       button.connect("clicked", self.on_go_down, ui)
       button.set_sensitive(False)
       ui['button_down'] = button
 
       button = Gtk.Button(_("Last"))
-      button_box.pack_start(button, False, True, 0)
+      button_box.append(button)
+      button_box.set_child_packing(button, False, True, 0, Gtk.PackType.START)
       button.connect("clicked", self.on_goto_last, ui)
       button.set_sensitive(False)
       ui['button_last'] = button
 
       button = Gtk.Button(_("New"))
-      button_box.pack_start(button, False, True, 0)
+      button_box.append(button)
+      button_box.set_child_packing(button, False, True, 0, Gtk.PackType.START)
       button.connect("clicked", self.on_new, ui)
       ui['button_new'] = button
 
       button = Gtk.Button(_("Edit"))
-      button_box.pack_start(button, False, True, 0)
+      button_box.append(button)
+      button_box.set_child_packing(button, False, True, 0, Gtk.PackType.START)
       button.set_sensitive(False)
       button.connect("clicked", self.on_edit, ui)
       ui['button_edit'] = button
 
       button = Gtk.Button(_("Delete"))
-      button_box.pack_start(button, False, True, 0)
+      button_box.append(button)
+      button_box.set_child_packing(button, False, True, 0, Gtk.PackType.START)
       button.connect("clicked", self.on_delete, ui)
       button.set_sensitive(False)
       ui['button_delete'] = button
 
 
 
-      hbox.pack_start(button_box, False, True, 0)
+      hbox.append(button_box)
+      hbox.set_child_packing(button_box, False, True, 0, Gtk.PackType.START)
       self.dbox = dbox
       dbox.show_all()
       res = dbox.run()
@@ -341,15 +345,9 @@ class RunCmdOnMatchMenu(plugin.MenuItem):
       data['button_delete'].set_sensitive(iter is not None)
 
     def _create_command_dialog(self, enabled_var = False, regexp_var = "", command_var = ""):
-      dialog = Gtk.Dialog(
-                        _("New Command"),
-                        None,
-                        Gtk.DialogFlags.MODAL,
-                        (
-                          _("_Cancel"), Gtk.ResponseType.REJECT,
-                          _("_OK"), Gtk.ResponseType.ACCEPT
-                        )
-                      )
+      dialog = Gtk.Dialog(_("New Command"), transient_for=self.dbox, modal=True)
+      dialog.add_button(_("_Cancel"), Gtk.ResponseType.REJECT)
+      dialog.add_button(_("_OK"), Gtk.ResponseType.ACCEPT)
       dialog.set_transient_for(self.dbox)
       table = Gtk.Table(3, 2)
 
@@ -371,7 +369,9 @@ class RunCmdOnMatchMenu(plugin.MenuItem):
       command.set_text(command_var)
       table.attach(command, 1, 2, 2, 3)
 
-      dialog.vbox.pack_start(table, True, True, 0)
+      content = dialog.get_content_area()
+      content.append(table)
+      content.set_child_packing(table, True, True, 0, Gtk.PackType.START)
       dialog.show_all()
       return (dialog,enabled,regexp,command)
 
@@ -384,11 +384,10 @@ class RunCmdOnMatchMenu(plugin.MenuItem):
         item['regexp'] = regexp.get_text()
         item['command'] = command.get_text()
         if item['regexp'] == '' or item['command'] == '':
-          err = Gtk.MessageDialog(dialog,
-                                  Gtk.DialogFlags.MODAL,
-                                  Gtk.MessageType.ERROR,
-                                  Gtk.ButtonsType.CLOSE,
-                                  _("You need to define a regexp and command")
+          err = Gtk.MessageDialog(transient_for=dialog, modal=True,
+                                  message_type=Gtk.MessageType.ERROR,
+                                  buttons=Gtk.ButtonsType.CLOSE,
+                                  text=_("You need to define a regexp and command")
                                 )
           err.run()
           err.destroy()
@@ -494,11 +493,10 @@ class RunCmdOnMatchMenu(plugin.MenuItem):
         item['regexp'] = regexp.get_text()
         item['command'] = command.get_text()
         if item['regexp'] == '' or item['command'] == '':
-          err = Gtk.MessageDialog(dialog,
-                                  Gtk.DialogFlags.MODAL,
-                                  Gtk.MessageType.ERROR,
-                                  Gtk.ButtonsType.CLOSE,
-                                  _("You need to define a regexp and a command")
+          err = Gtk.MessageDialog(transient_for=dialog, modal=True,
+                                  message_type=Gtk.MessageType.ERROR,
+                                  buttons=Gtk.ButtonsType.CLOSE,
+                                  text=_("You need to define a regexp and command")
                                 )
           err.run()
           err.destroy()

@@ -32,7 +32,7 @@ from terminatorlib.layoutlauncher import LayoutLauncher
 from . import regex
 
 # pylint: disable-msg=R0904
-class Terminal(Gtk.VBox):
+class Terminal(Gtk.Box):
     """Class implementing the VTE widget and its wrappings"""
 
     __gsignals__ = {
@@ -124,6 +124,7 @@ class Terminal(Gtk.VBox):
     def __init__(self):
         """Class initialiser"""
         GObject.GObject.__init__(self)
+        Gtk.Box.__init__(self, orientation=Gtk.Orientation.VERTICAL)
 
         self.terminator = Terminator()
         self.terminator.register_terminal(self)
@@ -183,13 +184,18 @@ class Terminal(Gtk.VBox):
 
         self.show()
         if self.config['title_at_bottom']:
-            self.pack_start(self.terminalbox, True, True, 0)
-            self.pack_start(self.titlebar, False, True, 0)
+            self.append(self.terminalbox)
+            self.set_child_packing(self.terminalbox, True, True, 0, Gtk.PackType.START)
+            self.append(self.titlebar)
+            self.set_child_packing(self.titlebar, False, True, 0, Gtk.PackType.START)
         else:
-            self.pack_start(self.titlebar, False, True, 0)
-            self.pack_start(self.terminalbox, True, True, 0)
+            self.append(self.titlebar)
+            self.set_child_packing(self.titlebar, False, True, 0, Gtk.PackType.START)
+            self.append(self.terminalbox)
+            self.set_child_packing(self.terminalbox, True, True, 0, Gtk.PackType.START)
 
-        self.pack_end(self.searchbar, True, True, 0)
+        self.append(self.searchbar)
+        self.set_child_packing(self.searchbar, True, True, 0, Gtk.PackType.END)
 
         self.connect_signals()
 
@@ -291,8 +297,10 @@ class Terminal(Gtk.VBox):
         self.scrollbar = Gtk.Scrollbar.new(Gtk.Orientation.VERTICAL, adjustment=self.vte.get_vadjustment())
         self.scrollbar.set_no_show_all(True)
 
-        terminalbox.pack_start(self.vte, True, True, 0)
-        terminalbox.pack_start(self.scrollbar, False, True, 0)
+        terminalbox.append(self.vte)
+        terminalbox.set_child_packing(self.vte, True, True, 0, Gtk.PackType.START)
+        terminalbox.append(self.scrollbar)
+        terminalbox.set_child_packing(self.scrollbar, False, True, 0, Gtk.PackType.START)
         terminalbox.show_all()
 
         return(terminalbox)
@@ -2093,10 +2101,9 @@ class Terminal(Gtk.VBox):
 
     def key_edit_window_title(self):
         window = self.get_toplevel()
-        dialog = Gtk.Dialog(_('Rename Window'), window,
-                            Gtk.DialogFlags.MODAL,
-                            (Gtk.STOCK_CANCEL, Gtk.ResponseType.REJECT,
-                             Gtk.STOCK_OK, Gtk.ResponseType.ACCEPT))
+        dialog = Gtk.Dialog(_('Rename Window'), transient_for=window, modal=True)
+        dialog.add_button(_("_Cancel"), Gtk.ResponseType.REJECT)
+        dialog.add_button(_("_OK"), Gtk.ResponseType.ACCEPT)
         dialog.set_default_response(Gtk.ResponseType.ACCEPT)
         dialog.set_resizable(False)
         dialog.set_border_width(8)
@@ -2107,8 +2114,11 @@ class Terminal(Gtk.VBox):
         if window.title.text != self.vte.get_window_title():
             name.set_text(self.get_toplevel().title.text)
 
-        dialog.vbox.pack_start(label, False, False, 6)
-        dialog.vbox.pack_start(name, False, False, 6)
+        content = dialog.get_content_area()
+        content.append(label)
+        content.set_child_packing(label, False, False, 6, Gtk.PackType.START)
+        content.append(name)
+        content.set_child_packing(name, False, False, 6, Gtk.PackType.START)
 
         dialog.show_all()
         res = dialog.run()

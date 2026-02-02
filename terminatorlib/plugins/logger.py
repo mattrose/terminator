@@ -92,8 +92,7 @@ class Logger(plugin.MenuItem):
                 self.loggers[vte_terminal]["handler_id"] = vte_terminal.connect('contents-changed', self.save)
             except:
                 e = sys.exc_info()[1]
-                error = Gtk.MessageDialog(None, Gtk.DialogFlags.MODAL, Gtk.MessageType.ERROR,
-                                          Gtk.ButtonsType.OK, e.strerror)
+                error = Gtk.MessageDialog(transient_for=None, modal=True, message_type=Gtk.MessageType.ERROR, buttons=Gtk.ButtonsType.OK, text=e.strerror)
                 error.set_transient_for(savedialog)
                 error.run()
                 error.destroy()

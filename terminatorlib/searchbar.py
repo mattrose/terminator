@@ -15,7 +15,7 @@ from . import regex
 from .util import dbg
 
 # pylint: disable-msg=R0904
-class Searchbar(Gtk.HBox):
+class Searchbar(Gtk.Box):
     """Class implementing the Searchbar widget"""
 
     __gsignals__ = {
@@ -36,6 +36,7 @@ class Searchbar(Gtk.HBox):
     def __init__(self):
         """Class initialiser"""
         GObject.GObject.__init__(self)
+        Gtk.Box.__init__(self, orientation=Gtk.Orientation.HORIZONTAL)
 
         # default regex flags are not CASELESS
         self.regex_flags_pcre2 = regex.FLAGS_PCRE2
@@ -67,8 +68,8 @@ class Searchbar(Gtk.HBox):
         close.set_relief(Gtk.ReliefStyle.NONE)
         close.set_focus_on_click(False)
         icon = Gtk.Image()
-        icon.set_from_stock(Gtk.STOCK_CLOSE, Gtk.IconSize.MENU)
-        close.add(icon)
+        icon.set_from_icon_name('window-close')
+        close.set_child(icon)
         close.set_name('terminator-search-close-button')
         if hasattr(close, 'set_tooltip_text'):
             close.set_tooltip_text(_('Close Search bar'))
@@ -108,14 +109,22 @@ class Searchbar(Gtk.HBox):
         self.invert_search.set_active(self.search_is_inverted)
         self.invert_search.connect('toggled', self.wrap_invert_search)
 
-        self.pack_start(label, False, True, 0)
-        self.pack_start(self.entry, True, True, 0)
-        self.pack_start(self.prev, False, False, 0)
-        self.pack_start(self.next, False, False, 0)
-        self.pack_start(self.wrap, False, False, 0)
-        self.pack_start(self.match_case, False, False, 0)
-        self.pack_start(self.invert_search, False, False, 0)
-        self.pack_end(close, False, False, 0)
+        self.append(label)
+        self.set_child_packing(label, False, True, 0, Gtk.PackType.START)
+        self.append(self.entry)
+        self.set_child_packing(self.entry, True, True, 0, Gtk.PackType.START)
+        self.append(self.prev)
+        self.set_child_packing(self.prev, False, False, 0, Gtk.PackType.START)
+        self.append(self.next)
+        self.set_child_packing(self.next, False, False, 0, Gtk.PackType.START)
+        self.append(self.wrap)
+        self.set_child_packing(self.wrap, False, False, 0, Gtk.PackType.START)
+        self.append(self.match_case)
+        self.set_child_packing(self.match_case, False, False, 0, Gtk.PackType.START)
+        self.append(self.invert_search)
+        self.set_child_packing(self.invert_search, False, False, 0, Gtk.PackType.START)
+        self.append(close)
+        self.set_child_packing(close, False, False, 0, Gtk.PackType.END)
 
         self.hide()
         self.set_no_show_all(True)

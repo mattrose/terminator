@@ -142,8 +142,7 @@ class TerminalPopupMenu(object):
             if not namecopy:
                 namecopy = _('_Copy address')
 
-            icon = Gtk.Image.new_from_stock(Gtk.STOCK_JUMP_TO,
-                                            Gtk.IconSize.MENU)
+            icon = Gtk.Image.new_from_icon_name('go-jump')
             item = Gtk.ImageMenuItem.new_with_mnemonic(nameopen)
             item.set_property('image', icon)
             item.connect('activate', lambda x: terminal.open_url(url, True))

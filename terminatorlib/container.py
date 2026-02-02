@@ -187,11 +187,11 @@ the tab will also close all terminals within it.')
             description_text = ''
 
         # dialog GUI
-        dialog = Gtk.Dialog(_('Close?'), window, Gtk.DialogFlags.MODAL)
+        dialog = Gtk.Dialog(_('Close?'), transient_for=window, modal=True)
         dialog.set_resizable(False)
     
-        dialog.add_button(Gtk.STOCK_CANCEL, Gtk.ResponseType.REJECT)
-        c_all = dialog.add_button(Gtk.STOCK_CLOSE, Gtk.ResponseType.ACCEPT)
+        dialog.add_button(_("_Cancel"), Gtk.ResponseType.REJECT)
+        c_all = dialog.add_button(_("_Close"), Gtk.ResponseType.ACCEPT)
         c_all.get_children()[0].get_children()[0].get_children()[1].set_label(
                 confirm_button_text)
     
@@ -202,21 +202,27 @@ the tab will also close all terminals within it.')
         secondary = Gtk.Label(label=description_text)
         secondary.set_line_wrap(True)
                     
-        labels = Gtk.VBox()
-        labels.pack_start(primary, False, False, 6)
-        labels.pack_start(secondary, False, False, 6)
+        labels = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        labels.append(primary)
+        labels.set_child_packing(primary, False, False, 6, Gtk.PackType.START)
+        labels.append(secondary)
+        labels.set_child_packing(secondary, False, False, 6, Gtk.PackType.START)
     
-        image = Gtk.Image.new_from_stock(Gtk.STOCK_DIALOG_WARNING,
-                                         Gtk.IconSize.DIALOG)
+        image = Gtk.Image.new_from_icon_name('dialog-warning')
         image.set_alignment(0.5, 0)
     
-        box = Gtk.HBox()
-        box.pack_start(image, False, False, 6)
-        box.pack_start(labels, False, False, 6)
-        dialog.vbox.pack_start(box, False, False, 12)
+        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        box.append(image)
+        box.set_child_packing(image, False, False, 6, Gtk.PackType.START)
+        box.append(labels)
+        box.set_child_packing(labels, False, False, 6, Gtk.PackType.START)
+        content = dialog.get_content_area()
+        content.append(box)
+        content.set_child_packing(box, False, False, 12, Gtk.PackType.START)
 
         checkbox = Gtk.CheckButton(_("Do not show this message next time"))
-        dialog.vbox.pack_end(checkbox, True, True, 0)
+        content.append(checkbox)
+        content.set_child_packing(checkbox, True, True, 0, Gtk.PackType.END)
     
         dialog.show_all()
 

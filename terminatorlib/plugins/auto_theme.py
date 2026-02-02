@@ -265,9 +265,12 @@ class MySettingDialog(Gtk.Dialog):
         # button_box.set_spacing(5)
 
         # Pack buttons into the button box
-        button_box.pack_start(self.radio_light, True, True, 0)
-        button_box.pack_start(self.radio_dark,  True, True, 0)
-        button_box.pack_start(self.radio_auto,  True, True, 0)
+        button_box.append(self.radio_light)
+        button_box.set_child_packing(self.radio_light, True, True, 0, Gtk.PackType.START)
+        button_box.append(self.radio_dark)
+        button_box.set_child_packing(self.radio_dark, True, True, 0, Gtk.PackType.START)
+        button_box.append(self.radio_auto)
+        button_box.set_child_packing(self.radio_auto, True, True, 0, Gtk.PackType.START)
 
         # Attach the button box to the grid
         mode_label = Gtk.Label(label="Vte")
@@ -297,9 +300,12 @@ class MySettingDialog(Gtk.Dialog):
         # button_box2.set_spacing(5)
 
         # Pack buttons into the button box
-        button_box2.pack_start(self.variant_light, True, True, 0)
-        button_box2.pack_start(self.variant_dark,  True, True, 0)
-        button_box2.pack_start(self.variant_auto,  True, True, 0)
+        button_box2.append(self.variant_light)
+        button_box2.set_child_packing(self.variant_light, True, True, 0, Gtk.PackType.START)
+        button_box2.append(self.variant_dark)
+        button_box2.set_child_packing(self.variant_dark, True, True, 0, Gtk.PackType.START)
+        button_box2.append(self.variant_auto)
+        button_box2.set_child_packing(self.variant_auto, True, True, 0, Gtk.PackType.START)
 
         theme_label = Gtk.Label(label="Gtk")
         theme_label.set_tooltip_text('for UI')
@@ -331,8 +337,8 @@ class MySettingDialog(Gtk.Dialog):
         self.radio_auto.connect("toggled",  self.on_radio_button_toggled)
 
         ### --------- footer: action buttons
-        self.add_button(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL)
-        self.add_button(Gtk.STOCK_OK, Gtk.ResponseType.OK)
+        self.add_button(_("_Cancel"), Gtk.ResponseType.CANCEL)
+        self.add_button(_("_OK"), Gtk.ResponseType.OK)
 
         # Connect the response signal
         self.connect("response", self.on_dialog_response)
