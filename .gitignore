@@ -1,0 +1,26 @@
+## Editors
+*~
+.*.sw[op]
+.project
+.idea
+.pydevproject
+.vscode
+
+## VCS
+/.bzr
+
+## Python
+/.eggs
+*.pyc
+*.egg-info
+/build
+terminatorc
+remotinatorc
+terminatorlib/meliae
+/dist
+/MANIFEST
+
+## language / intltool related files
+.intltool*
+data/terminator.appdata.xml
+data/terminator.desktop

@@ -1,0 +1,1779 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+# 
+# Translators:
+# Gnome Terminator <terminator@lazyfrosch.de>, 2020
+# linuxrendszergazda linuxrendszergazda, 2025
+# 
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2022-10-19 09:29-0400\n"
+"PO-Revision-Date: 2020-04-22 08:11+0000\n"
+"Last-Translator: linuxrendszergazda linuxrendszergazda, 2025\n"
+"Language-Team: Hungarian (https://app.transifex.com/terminator/teams/109338/hu/)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: hu\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#. Command             uuid req.    Description
+#: ../remotinator.py:39
+msgid "Open a new window"
+msgstr "Új ablak megnyitása"
+
+#: ../remotinator.py:40
+msgid "Open a new tab"
+msgstr "Új lap megnyitása"
+
+#: ../remotinator.py:41
+msgid "Split the current terminal horizontally"
+msgstr "Terminál kettéosztása vízszintesen"
+
+#: ../remotinator.py:42
+msgid "Split the current terminal vertically"
+msgstr "Terminál kettéosztása függőlegesen"
+
+#: ../remotinator.py:43
+msgid "Get a list of all terminals"
+msgstr "Kérek egy listát az összes terminálról"
+
+#: ../remotinator.py:44
+msgid "Get the uuid of the current focused terminal"
+msgstr "Jelenleg fókuszban lévő terminál UUID azonosítójának a lekérése"
+
+#: ../remotinator.py:45
+msgid "Get the UUID of a parent window"
+msgstr "Szülőablak UUID azonosítójának a mutatása"
+
+#: ../remotinator.py:46
+msgid "Get the title of a parent window"
+msgstr "Cím öröklése a szülőablakból"
+
+#: ../remotinator.py:47
+msgid "Get the UUID of a parent tab"
+msgstr "UUID öröklése a szülőfülről"
+
+#: ../remotinator.py:48
+msgid "Get the title of a parent tab"
+msgstr "Cím öröklése a szülőfülről"
+
+#: ../remotinator.py:49
+msgid "Set the title of a parent tab"
+msgstr "Egy szülőlap címének beállítása"
+
+#: ../remotinator.py:50
+msgid "Set the background image"
+msgstr "Háttérkép beállítása"
+
+#: ../remotinator.py:51
+msgid "Set the background image for all terminals"
+msgstr "Háttérkép beállítása az összes terminál számára."
+
+#: ../remotinator.py:52
+msgid "Switch current terminal profile"
+msgstr "Aktuális terminál-profil váltása"
+
+#: ../remotinator.py:53
+msgid "Switch profile of all currently running terminals"
+msgstr "Jelenleg futó összes terminál profiljának a váltása"
+
+#: ../remotinator.py:70
+#, python-format
+msgid ""
+"Run one of the following Terminator DBus commands:\n"
+"\n"
+"%s"
+msgstr ""
+"A következő Terminator DBus parancs egyikének futtatása:\n"
+"\n"
+" %s"
+
+#: ../remotinator.py:71
+msgid ""
+"* These entries require either TERMINATOR_UUID environment var,\n"
+"  or the --uuid option must be used."
+msgstr ""
+"* Ezekhez a bejegyzésekhez vagy TERMINATOR_UUID környezeti változóval,\n"
+"vagy a --uuid paraméterrel kell használni."
+
+#: ../remotinator.py:77
+msgid "Terminal UUID for when not in env var TERMINATOR_UUID"
+msgstr ""
+"Terminál UUID, arra az esetre amikor nincs magadba a TERMINATOR_UUID "
+"környezeti változó"
+
+#: ../remotinator.py:80
+msgid "Profile name to switch to"
+msgstr "Profilnév, amelyre váltani kell"
+
+#: ../remotinator.py:83
+msgid "File to pass to command"
+msgstr "Parancsnak átadandó fájl"
+
+#: ../remotinator.py:86
+msgid "Command to run in new terminal"
+msgstr "Parancs, az új terminálban való futtatáshoz"
+
+#: ../remotinator.py:89
+msgid "Tab name to set. Only used with \"set_tab_title\" command."
+msgstr "Beállítandó lapnév. Kizárólag a \"set_tab_title\" paranccsal használható."
+
+#: ../remotinator.py:92
+msgid "Tab name to set."
+msgstr "Beállítani kívánt lapnév."
+
+#: ../data/terminator.desktop.in.h:1 ../data/terminator.appdata.xml.in.h:1
+#: ../terminatorlib/plugins/activitywatch.py:83
+#: ../terminatorlib/plugins/activitywatch.py:162
+#: ../terminatorlib/preferences.glade.h:156
+msgid "Terminator"
+msgstr "Terminator"
+
+#: ../data/terminator.desktop.in.h:2 ../data/terminator.appdata.xml.in.h:2
+msgid "Multiple terminals in one window"
+msgstr "Több terminál egy ablakban"
+
+#: ../data/terminator.appdata.xml.in.h:3
+#: ../terminatorlib/preferences.glade.h:157
+msgid "The robot future of terminals"
+msgstr "A terminálok robotjövője"
+
+#: ../data/terminator.appdata.xml.in.h:4
+msgid ""
+"A power-user tool for arranging terminals. It is inspired by programs such "
+"as gnome-multi-term, quadkonsole, etc. in that the main focus is arranging "
+"terminals in grids (tabs is the most common default method, which Terminator"
+" also supports)."
+msgstr ""
+"Egy haladó felhasználóknak szánt eszköz a terminálablakok elrendezésének "
+"céljából. Olyan programok ihlették, mint a gnome-multi-term, quadkonsole "
+"stb., mivel ezeknél a fő hangsúly szintén az egyes terminálablakok rácsos "
+"elrendezésén van. (A fülek a leggyakoribb alapértelmezett módszer, amelyet a"
+" Terminator is támogat)."
+
+#: ../data/terminator.appdata.xml.in.h:5
+msgid ""
+"Much of the behavior of Terminator is based on GNOME Terminal, and we are "
+"adding more features from that as time goes by, but we also want to extend "
+"out in different directions with useful features for sysadmins and other "
+"users."
+msgstr ""
+"A Terminátor viselkedésének nagy része a GNOME Terminálon alapul, és az idő "
+"előrehaladtával ebből további funkciókat adunk hozzá, de szeretnénk a "
+"rendszergazdák és más felhasználók számára is hasznos funkciókkal bővíteni "
+"különböző irányokba."
+
+#: ../data/terminator.appdata.xml.in.h:6
+msgid "Some highlights:"
+msgstr "Néhányat kiemelve:"
+
+#: ../data/terminator.appdata.xml.in.h:7
+msgid "Arrange terminals in a grid"
+msgstr "Terminálok rácsba rendezése"
+
+#: ../data/terminator.appdata.xml.in.h:8
+msgid "Tabs"
+msgstr "Fülek"
+
+#: ../data/terminator.appdata.xml.in.h:9
+msgid "Drag and drop re-ordering of terminals"
+msgstr "A terminálablakok \"fogd és vidd\" stílusú átrendezésének lehetősége"
+
+#: ../data/terminator.appdata.xml.in.h:10
+msgid "Lots of keyboard shortcuts"
+msgstr "Sok billentyűparancs kombináció"
+
+#: ../data/terminator.appdata.xml.in.h:11
+msgid "Save multiple layouts and profiles via GUI preferences editor"
+msgstr ""
+"Lehetőség a többféle elrendezés és profilt mentésére a GUI beállítás-"
+"szerkesztő segítségével"
+
+#: ../data/terminator.appdata.xml.in.h:12
+msgid "Simultaneous typing to arbitrary groups of terminals"
+msgstr "Tetszőleges terminálcsoportokban történő egyidejű gépelési lehetőség"
+
+#: ../data/terminator.appdata.xml.in.h:13
+msgid "And lots more..."
+msgstr "Valamint a felsoroltakon kívül még sok más lehetőség..."
+
+#: ../data/terminator.appdata.xml.in.h:14
+msgid "The main window showing the application in action"
+msgstr "A főablak munka közben mutatja a futó alkalmazást"
+
+#: ../data/terminator.appdata.xml.in.h:15
+msgid "Getting a little crazy with the terminals"
+msgstr "Egy kicsit elkezdeni megőrülni a terminálokkal"
+
+#: ../data/terminator.appdata.xml.in.h:16
+msgid "The preferences window where you can change the defaults"
+msgstr ""
+"A Beállítások ablak. Ez az ahol meglehet változtatni az alapértelmezett "
+"értékeket"
+
+#: ../terminatorlib/container.py:163
+msgid "Close?"
+msgstr "Valóban bezárja?"
+
+#: ../terminatorlib/container.py:169
+msgid "Close _Terminals"
+msgstr "_Terminálok bezárása"
+
+#: ../terminatorlib/container.py:171
+msgid "<big><b>Close multiple terminals?</b></big>"
+msgstr "Bezárja az több terminállal rendelkező terminálablakokat?"
+
+#: ../terminatorlib/container.py:175
+msgid ""
+"This window has several terminals open. Closing the window will also close "
+"all terminals within it."
+msgstr ""
+"Több nyitott terminál van ebben az ablakban. Az ablak bezárása az összes "
+"benne megnyitott terminált is bezárja."
+
+#: ../terminatorlib/container.py:178
+msgid ""
+"This tab has several terminals open. Closing the tab will also close all "
+"terminals within it."
+msgstr ""
+"Ezen a lapon több terminál van nyitva. A fül bezárásával az összes terminál "
+"be fog záródni."
+
+#: ../terminatorlib/container.py:198
+msgid "Do not show this message next time"
+msgstr "Ne jelenjen meg legközelebb ez az üzenet"
+
+#: ../terminatorlib/layoutlauncher.glade.h:1
+msgid "Terminator Layout Launcher"
+msgstr "Terminátor elrendezés indító."
+
+#: ../terminatorlib/layoutlauncher.glade.h:2
+#: ../terminatorlib/preferences.glade.h:143
+msgid "Layout"
+msgstr "Elrendezés"
+
+#: ../terminatorlib/layoutlauncher.glade.h:3
+msgid "Launch"
+msgstr "Indítás"
+
+#: ../terminatorlib/notebook.py:383
+msgid "tab"
+msgstr "lap"
+
+#: ../terminatorlib/notebook.py:655
+msgid "Close Tab"
+msgstr "Lap bezárása"
+
+#: ../terminatorlib/optionparse.py:43
+msgid "Display program version"
+msgstr "Program verziójának megjelenítése"
+
+#: ../terminatorlib/optionparse.py:45 ../terminatorlib/optionparse.py:47
+msgid "Maximize the window"
+msgstr "Az ablak maximalizálása"
+
+#: ../terminatorlib/optionparse.py:49
+msgid "Make the window fill the screen"
+msgstr "Az ablak töltse ki teljesen a képernyőt"
+
+#: ../terminatorlib/optionparse.py:51
+msgid "Disable window borders"
+msgstr "Ablakkeret eltávolítása"
+
+#: ../terminatorlib/optionparse.py:53
+msgid "Hide the window at startup"
+msgstr "Ablak elrejtése indításkor"
+
+#: ../terminatorlib/optionparse.py:55
+msgid "Specify a title for the window"
+msgstr "Ablak címének megadása"
+
+#: ../terminatorlib/optionparse.py:57
+msgid "Set the preferred size and position of the window(see X man page)"
+msgstr "Az ablak méretének kívánt mérete és pozíciója (lásd az X man oldalát)"
+
+#: ../terminatorlib/optionparse.py:61 ../terminatorlib/optionparse.py:64
+msgid "Specify a command to execute inside the terminal"
+msgstr "Parancs megadása a terminálon belüli futtatáshoz"
+
+#: ../terminatorlib/optionparse.py:66 ../terminatorlib/optionparse.py:73
+msgid ""
+"Use the rest of the command line as a command to execute inside the "
+"terminal, and its arguments"
+msgstr ""
+"Használja a parancssor többi részét parancsként a terminálon belül "
+"végrehajtandó parancsként, és annak argumentumait"
+
+#: ../terminatorlib/optionparse.py:69
+msgid "Specify a config file"
+msgstr "Konfigurációs fájl megadása"
+
+#: ../terminatorlib/optionparse.py:71
+msgid "Specify a partial config json file"
+msgstr "Részben konfigurációs json fájl megadása"
+
+#: ../terminatorlib/optionparse.py:76
+msgid "Set the working directory"
+msgstr "Munkakönyvtár beállítása"
+
+#: ../terminatorlib/optionparse.py:77
+msgid "Set a custom icon for the window (by file or name)"
+msgstr "Egyedi ikon beállítása az ablaknak (fájllal vagy névvel)"
+
+#: ../terminatorlib/optionparse.py:80
+msgid "Set a custom WM_WINDOW_ROLE property on the window"
+msgstr "Egyedi WM_WINDOW_ROLE tulajdonság beállítása az ablakon"
+
+#: ../terminatorlib/optionparse.py:82
+msgid "Launch with the given layout"
+msgstr "Indítás adott elrendezéssel"
+
+#: ../terminatorlib/optionparse.py:84
+msgid "Select a layout from a list"
+msgstr "Válassz egy elrendezést a listából"
+
+#: ../terminatorlib/optionparse.py:86
+msgid "Use a different profile as the default"
+msgstr "Másik profil használata alapértelmezettként"
+
+#: ../terminatorlib/optionparse.py:88
+msgid "Disable DBus"
+msgstr "DBus lekapcsolása"
+
+#: ../terminatorlib/optionparse.py:90
+msgid "Enable debugging information (twice for debug server)"
+msgstr ""
+"Hibakeresési információk engedélyezése (kétszer hibakereső szervernek)"
+
+#: ../terminatorlib/optionparse.py:92
+msgid "Comma separated list of classes to limit debugging to"
+msgstr "Vesszővel elválasztott osztályok listája a hibakeresés korlátozásához"
+
+#: ../terminatorlib/optionparse.py:94
+msgid "Comma separated list of methods to limit debugging to"
+msgstr ""
+"A hibakeresés korlátozására szolgáló módszerek vesszővel elválasztott "
+"listája"
+
+#: ../terminatorlib/optionparse.py:96
+msgid "If Terminator is already running, just open a new tab"
+msgstr "Ha már fut a Terminátor, akkor csak új fület nyisson"
+
+#: ../terminatorlib/optionparse.py:98
+msgid "If Terminator is already running, just unhide all hidden windows"
+msgstr ""
+"Ha a Terminátor már fut, akkor csak jelenjen meg az összes rejtett ablak"
+
+#: ../terminatorlib/optionparse.py:100
+msgid "List all profiles"
+msgstr "Összes profil megjelenítése"
+
+#: ../terminatorlib/optionparse.py:102
+msgid "List all layouts"
+msgstr "Összes elrendezés megjelenítése"
+
+#: ../terminatorlib/plugins/activitywatch.py:54
+msgid "Watch for _activity"
+msgstr "Az _aktivitás figyelése"
+
+#: ../terminatorlib/plugins/activitywatch.py:83
+#, python-format
+msgid "Activity in: %s"
+msgstr "Tevékenység: %s"
+
+#: ../terminatorlib/plugins/activitywatch.py:120
+msgid "Watch for _silence"
+msgstr "A c_send figyelése"
+
+#: ../terminatorlib/plugins/activitywatch.py:162
+#, python-format
+msgid "Silence in: %s"
+msgstr "Csend: %s"
+
+#: ../terminatorlib/plugins/custom_commands.py:61
+msgid "_Custom Commands"
+msgstr "Egyéni paran_csok"
+
+#. VERIFY FOR GTK3: is this ever false?
+#: ../terminatorlib/plugins/custom_commands.py:67
+#: ../terminatorlib/terminal_popup_menu.py:197
+msgid "_Preferences"
+msgstr "_Beállítások"
+
+#: ../terminatorlib/plugins/custom_commands.py:134
+msgid "Custom Commands Configuration"
+msgstr "Egyéni parancsok beállítása"
+
+#: ../terminatorlib/plugins/custom_commands.py:138
+#: ../terminatorlib/plugins/custom_commands.py:287
+#: ../terminatorlib/plugins/logger.py:20
+#: ../terminatorlib/plugins/terminalshot.py:20
+msgid "_Cancel"
+msgstr "_Mégsem"
+
+#: ../terminatorlib/plugins/custom_commands.py:139
+#: ../terminatorlib/plugins/custom_commands.py:288
+msgid "_OK"
+msgstr "_OK"
+
+#: ../terminatorlib/plugins/custom_commands.py:166
+msgid "Enabled"
+msgstr "Bekapcsolva"
+
+#: ../terminatorlib/plugins/custom_commands.py:170
+#: ../terminatorlib/preferences.glade.h:145
+msgid "Name"
+msgstr "Név"
+
+#: ../terminatorlib/plugins/custom_commands.py:174
+#: ../terminatorlib/preferences.glade.h:103
+msgid "Command"
+msgstr "Parancs"
+
+#: ../terminatorlib/plugins/custom_commands.py:188
+#: ../terminatorlib/preferences.glade.h:37
+msgid "Top"
+msgstr "Fent"
+
+#: ../terminatorlib/plugins/custom_commands.py:194
+msgid "Up"
+msgstr "Fel"
+
+#: ../terminatorlib/plugins/custom_commands.py:200
+msgid "Down"
+msgstr "Le"
+
+#: ../terminatorlib/plugins/custom_commands.py:206
+msgid "Last"
+msgstr "Utolsó"
+
+#: ../terminatorlib/plugins/custom_commands.py:212
+msgid "New"
+msgstr "Új"
+
+#: ../terminatorlib/plugins/custom_commands.py:217
+msgid "Edit"
+msgstr "Szerkesztés"
+
+#: ../terminatorlib/plugins/custom_commands.py:223
+msgid "Delete"
+msgstr "Törlés"
+
+#: ../terminatorlib/plugins/custom_commands.py:283
+msgid "New Command"
+msgstr "Új parancs"
+
+#: ../terminatorlib/plugins/custom_commands.py:294
+msgid "Enabled:"
+msgstr "Engedélyezve:"
+
+#: ../terminatorlib/plugins/custom_commands.py:300
+msgid "Name:"
+msgstr "Név:"
+
+#: ../terminatorlib/plugins/custom_commands.py:306
+msgid "Command:"
+msgstr "Parancs:"
+
+#: ../terminatorlib/plugins/custom_commands.py:329
+#: ../terminatorlib/plugins/custom_commands.py:439
+msgid "You need to define a name and command"
+msgstr "Nevet és parancsot kell megadnia"
+
+#: ../terminatorlib/plugins/custom_commands.py:346
+#: ../terminatorlib/plugins/custom_commands.py:458
+#, python-format
+msgid "Name *%s* already exist"
+msgstr "A *%s* név már foglalt."
+
+#: ../terminatorlib/plugins/dir_open.py:26
+msgid "Open current directory"
+msgstr "Jelenlegi könyvtár megnyitása"
+
+#: ../terminatorlib/plugins/logger.py:21
+#: ../terminatorlib/plugins/terminalshot.py:21
+msgid "_Save"
+msgstr "_Mentés"
+
+#: ../terminatorlib/plugins/logger.py:32
+msgid "Start _Logger"
+msgstr "Naplózás _Indítása"
+
+#: ../terminatorlib/plugins/logger.py:35
+msgid "Stop _Logger"
+msgstr "Naplózás _Leállítása"
+
+#: ../terminatorlib/plugins/logger.py:65
+msgid "Save Log File As"
+msgstr "Naplófájl mentése mint"
+
+#: ../terminatorlib/plugins/terminalshot.py:28
+msgid "Terminal _screenshot"
+msgstr "_Képernyőkép készítése a terminálról"
+
+#: ../terminatorlib/plugins/terminalshot.py:37
+msgid "Save image"
+msgstr "Kép mentése"
+
+#: ../terminatorlib/preferences.glade.h:1
+msgid "Automatic"
+msgstr "Automatikus"
+
+#: ../terminatorlib/preferences.glade.h:2
+msgid "Control-H"
+msgstr "Control-H"
+
+#: ../terminatorlib/preferences.glade.h:3
+msgid "ASCII DEL"
+msgstr "ASCII DEL"
+
+#: ../terminatorlib/preferences.glade.h:4
+msgid "Escape sequence"
+msgstr "Escape szekvencia"
+
+#. FIXME: Why isn't this being done by Terminator() ?
+#: ../terminatorlib/preferences.glade.h:5 ../terminatorlib/window.py:754
+msgid "All"
+msgstr "Összes"
+
+#: ../terminatorlib/preferences.glade.h:6
+msgid "Group"
+msgstr "Csoport"
+
+#: ../terminatorlib/preferences.glade.h:7
+msgid "None"
+msgstr "Nincs"
+
+#: ../terminatorlib/preferences.glade.h:8
+msgid "Exit the terminal"
+msgstr "Kilépés a terminálból"
+
+#: ../terminatorlib/preferences.glade.h:9
+msgid "Restart the command"
+msgstr "Parancs újbóli futtatása"
+
+#: ../terminatorlib/preferences.glade.h:10
+msgid "Hold the terminal open"
+msgstr "Tartsa nyitva a terminált"
+
+#: ../terminatorlib/preferences.glade.h:11
+msgid "Black on light yellow"
+msgstr "Fekete a világossárgán"
+
+#: ../terminatorlib/preferences.glade.h:12
+msgid "Black on white"
+msgstr "Fekete a fehéren"
+
+#: ../terminatorlib/preferences.glade.h:13
+msgid "Gray on black"
+msgstr "Szürke a feketén"
+
+#: ../terminatorlib/preferences.glade.h:14
+msgid "Green on black"
+msgstr "Zöld a feketén"
+
+#: ../terminatorlib/preferences.glade.h:15
+msgid "White on black"
+msgstr "Fehér a feketén"
+
+#: ../terminatorlib/preferences.glade.h:16
+msgid "Orange on black"
+msgstr "Narancssárga a feketén"
+
+#: ../terminatorlib/preferences.glade.h:17
+msgid "Ambience"
+msgstr "Ambience"
+
+#: ../terminatorlib/preferences.glade.h:18
+msgid "Solarized light"
+msgstr "Solarized light"
+
+#: ../terminatorlib/preferences.glade.h:19
+msgid "Solarized dark"
+msgstr "Solarized dark"
+
+#: ../terminatorlib/preferences.glade.h:20
+msgid "Gruvbox light"
+msgstr "Gruvbox light"
+
+#: ../terminatorlib/preferences.glade.h:21
+msgid "Gruvbox dark"
+msgstr "Gruvbox dark"
+
+#: ../terminatorlib/preferences.glade.h:22
+msgid "Custom"
+msgstr "Egyedi"
+
+#: ../terminatorlib/preferences.glade.h:23
+msgid "Block"
+msgstr "Fekete"
+
+#: ../terminatorlib/preferences.glade.h:24
+msgid "Underline"
+msgstr "Aláhúzás"
+
+#: ../terminatorlib/preferences.glade.h:25
+msgid "I-Beam"
+msgstr "I-sugár"
+
+#: ../terminatorlib/preferences.glade.h:26
+msgid "GNOME Default"
+msgstr "GNOME alapértelmezés"
+
+#: ../terminatorlib/preferences.glade.h:27
+msgid "Click to focus"
+msgstr "Kattintás a fókuszhoz"
+
+#: ../terminatorlib/preferences.glade.h:28
+msgid "Follow mouse pointer"
+msgstr "Egérmutató követése"
+
+#: ../terminatorlib/preferences.glade.h:29
+msgid "Tango"
+msgstr "Tango"
+
+#: ../terminatorlib/preferences.glade.h:30
+msgid "Linux"
+msgstr "Linux"
+
+#: ../terminatorlib/preferences.glade.h:31
+msgid "XTerm"
+msgstr "XTerm"
+
+#: ../terminatorlib/preferences.glade.h:32
+msgid "Rxvt"
+msgstr "Rxvt"
+
+#: ../terminatorlib/preferences.glade.h:33
+msgid "Solarized"
+msgstr "Solarized"
+
+#: ../terminatorlib/preferences.glade.h:34
+msgid "On the left side"
+msgstr "Balra"
+
+#: ../terminatorlib/preferences.glade.h:35
+msgid "On the right side"
+msgstr "Jobbra"
+
+#: ../terminatorlib/preferences.glade.h:36
+msgid "Disabled"
+msgstr "Kikapcsolva"
+
+#: ../terminatorlib/preferences.glade.h:38
+msgid "Bottom"
+msgstr "Lent"
+
+#: ../terminatorlib/preferences.glade.h:39
+msgid "Left"
+msgstr "Balra"
+
+#: ../terminatorlib/preferences.glade.h:40
+msgid "Right"
+msgstr "Jobbra"
+
+#: ../terminatorlib/preferences.glade.h:41
+msgid "Hidden"
+msgstr "Rejtett"
+
+#: ../terminatorlib/preferences.glade.h:42
+msgid "Normal"
+msgstr "Normál"
+
+#: ../terminatorlib/preferences.glade.h:43
+msgid "Maximised"
+msgstr "Maximalizált"
+
+#: ../terminatorlib/preferences.glade.h:44
+msgid "Fullscreen"
+msgstr "Teljes képernyő"
+
+#: ../terminatorlib/preferences.glade.h:45
+msgid "Terminator Preferences"
+msgstr "Terminátor beállítása"
+
+#: ../terminatorlib/preferences.glade.h:46
+msgid "<b>Behavior</b>"
+msgstr "<b>Viselkedés</b>"
+
+#: ../terminatorlib/preferences.glade.h:47
+msgid "Window state:"
+msgstr "Ablak stílusa:"
+
+#: ../terminatorlib/preferences.glade.h:48
+msgid "Always on top"
+msgstr "Mindig felül"
+
+#: ../terminatorlib/preferences.glade.h:49
+msgid "Show on all workspaces"
+msgstr "Minden munkaterületen megjelenik"
+
+#: ../terminatorlib/preferences.glade.h:50
+msgid "Hide on lose focus"
+msgstr "Elrejtés a fókusz elvesztése esetén"
+
+#: ../terminatorlib/preferences.glade.h:51
+msgid "Hide from taskbar"
+msgstr "Elrejtés a tálcáról"
+
+#: ../terminatorlib/preferences.glade.h:52
+msgid "Window geometry hints"
+msgstr "Ablakgeometriai tippek mutatása"
+
+#: ../terminatorlib/preferences.glade.h:53
+msgid "DBus server"
+msgstr "DBus szerver"
+
+#: ../terminatorlib/preferences.glade.h:54
+msgid "Mouse focus:"
+msgstr "Egérmutató hatására fókuszáljon:"
+
+#: ../terminatorlib/preferences.glade.h:55
+msgid "Broadcast default:"
+msgstr "Alapértelmezett adás:"
+
+#: ../terminatorlib/preferences.glade.h:56
+msgid "PuTTY style paste:"
+msgstr "PuTTY stílusú beillesztés:"
+
+#: ../terminatorlib/preferences.glade.h:57
+msgid "Smart copy"
+msgstr "Okos másolás"
+
+#: ../terminatorlib/preferences.glade.h:58
+msgid "Re-use profiles for new terminals"
+msgstr "A profilok újra felhasználása az új terminálokhoz"
+
+#: ../terminatorlib/preferences.glade.h:59
+msgid "Use custom URL handler"
+msgstr "Használjon egyéni URL-kezelőt"
+
+#: ../terminatorlib/preferences.glade.h:60
+msgid "PRIMARY"
+msgstr "ELSŐDLEGES"
+
+#: ../terminatorlib/preferences.glade.h:61
+msgid "Clipboard"
+msgstr "Vágólap"
+
+#: ../terminatorlib/preferences.glade.h:62
+msgid "Clear selection on copy"
+msgstr "A kijelölés törlése másoláskor"
+
+#: ../terminatorlib/preferences.glade.h:63
+msgid "Open links with a single click (instead of Ctrl-left click)"
+msgstr ""
+"Linkek megnyitása egyetlen kattintással (a BAL CTRL + KATTINTÁS helyett)"
+
+#: ../terminatorlib/preferences.glade.h:64
+msgid "Disable mouse paste"
+msgstr "Egérrel történő beillesztés kikapcsolása"
+
+#: ../terminatorlib/preferences.glade.h:65
+msgid "Custom URL handler:"
+msgstr "Egyedi URL kezelő:"
+
+#: ../terminatorlib/preferences.glade.h:66
+msgid "<b>Appearance</b>"
+msgstr "<b>Megjelenés</b>"
+
+#: ../terminatorlib/preferences.glade.h:67
+msgid "Window borders"
+msgstr "Ablakkeretek"
+
+#: ../terminatorlib/preferences.glade.h:68
+msgid "Unfocused terminal font brightness:"
+msgstr "Fókusz nélküli terminál betűtípusának világossága:"
+
+#: ../terminatorlib/preferences.glade.h:69
+msgid "Terminal separator size:"
+msgstr "Terminál elválasztójának a mérete:"
+
+#: ../terminatorlib/preferences.glade.h:70
+msgid "Extra Styling (Theme dependant)"
+msgstr "Extra stílus (témafüggő)"
+
+#: ../terminatorlib/preferences.glade.h:71
+msgid "Cell Height:"
+msgstr "Cella magassága:"
+
+#: ../terminatorlib/preferences.glade.h:72
+msgid "Cell Width:"
+msgstr "Cella szélessége:"
+
+#: ../terminatorlib/preferences.glade.h:73
+msgid "Tab position:"
+msgstr "Fül elhelyezkedése:"
+
+#: ../terminatorlib/preferences.glade.h:74
+msgid "Tabs homogeneous"
+msgstr "Homogén fülek"
+
+#: ../terminatorlib/preferences.glade.h:75
+msgid "Tabs scroll buttons"
+msgstr "Lapok görgetőgombjai"
+
+#: ../terminatorlib/preferences.glade.h:76
+msgid "Title bar at bottom (Require restart)"
+msgstr "A címsor alul helyezkedjen el. (Újraindítás szükséges)."
+
+#: ../terminatorlib/preferences.glade.h:77
+msgid "Global"
+msgstr "Globális"
+
+#: ../terminatorlib/preferences.glade.h:78
+msgid "Profile"
+msgstr "Profil"
+
+#: ../terminatorlib/preferences.glade.h:79
+msgid "_Use the system fixed width font"
+msgstr "Használja a rendszer rögzített szélességű betűtípusát"
+
+#: ../terminatorlib/preferences.glade.h:80
+msgid "_Font:"
+msgstr "_Font:"
+
+#: ../terminatorlib/preferences.glade.h:81
+msgid "Choose A Terminal Font"
+msgstr "Válassza ki a terminál betűtípusát"
+
+#: ../terminatorlib/preferences.glade.h:82
+msgid "_Allow bold text"
+msgstr "_Félkövér szöveg engedélyezése"
+
+#: ../terminatorlib/preferences.glade.h:83
+msgid "Show titlebar"
+msgstr "Címsor megjelenítése"
+
+#: ../terminatorlib/preferences.glade.h:84
+msgid "Copy on selection"
+msgstr "Másolás kijelöléskor"
+
+#: ../terminatorlib/preferences.glade.h:85
+msgid "Disable Ctrl+mousewheel zoom"
+msgstr "CTRL + EGÉRGÖRGŐ -vel történő nagyítás kikapcsolása"
+
+#: ../terminatorlib/preferences.glade.h:86
+msgid "Select-by-_word characters:"
+msgstr "_Szavankénti karakterkijelölés:"
+
+#: ../terminatorlib/preferences.glade.h:87
+msgid "<b>Cursor</b>"
+msgstr "<b>Kurzor beállításai</b>"
+
+#: ../terminatorlib/preferences.glade.h:88
+msgid "_Shape:"
+msgstr "_Alak:"
+
+#: ../terminatorlib/preferences.glade.h:89
+msgid "Blink"
+msgstr "Villogás"
+
+#: ../terminatorlib/preferences.glade.h:90
+msgid "Use default colors"
+msgstr "Alapértelmezett színek használata"
+
+#: ../terminatorlib/preferences.glade.h:91
+msgid "Foreground:"
+msgstr "Előtér:"
+
+#: ../terminatorlib/preferences.glade.h:92
+msgid "Background:"
+msgstr "Háttér:"
+
+#: ../terminatorlib/preferences.glade.h:93
+msgid "<b>Terminal bell</b>"
+msgstr "<b>Terminál csengő</b>"
+
+#: ../terminatorlib/preferences.glade.h:94
+msgid "Titlebar icon"
+msgstr "Címsor ikonja"
+
+#: ../terminatorlib/preferences.glade.h:95
+msgid "Visual flash"
+msgstr "Látható villanás"
+
+#: ../terminatorlib/preferences.glade.h:96
+msgid "Audible beep"
+msgstr "Hallható sípolás"
+
+#: ../terminatorlib/preferences.glade.h:97
+msgid "Window list flash"
+msgstr "Ablaklista villogás"
+
+#: ../terminatorlib/preferences.glade.h:98
+msgid "General"
+msgstr "Általános"
+
+#: ../terminatorlib/preferences.glade.h:99
+msgid "_Run command as a login shell"
+msgstr "_Parancs futtatása bejelentkezési parancsértelmezőként"
+
+#: ../terminatorlib/preferences.glade.h:100
+msgid "Ru_n a custom command instead of my shell"
+msgstr "Futtasson egy egyedi pa_rancs a Shell helyett"
+
+#: ../terminatorlib/preferences.glade.h:101
+msgid "Custom co_mmand:"
+msgstr "Egyedi parancs:"
+
+#: ../terminatorlib/preferences.glade.h:102
+msgid "When command _exits:"
+msgstr "Amikor a parancs kilép:"
+
+#: ../terminatorlib/preferences.glade.h:104
+msgid "<b>Foreground and Background</b>"
+msgstr "<b>Előtér és Háttér</b>"
+
+#: ../terminatorlib/preferences.glade.h:105
+msgid "_Use colors from system theme"
+msgstr "_Rendszertéma színeinek használata"
+
+#: ../terminatorlib/preferences.glade.h:106
+msgid "Built-in sche_mes:"
+msgstr "Beépített sé_mák:"
+
+#: ../terminatorlib/preferences.glade.h:107
+msgid "_Foreground:"
+msgstr "Előtér:"
+
+#: ../terminatorlib/preferences.glade.h:108
+msgid "_Background:"
+msgstr "Háttér:"
+
+#: ../terminatorlib/preferences.glade.h:109
+msgid "<b>Palette</b>"
+msgstr "<b>Paletta</b>"
+
+#: ../terminatorlib/preferences.glade.h:110
+msgid "Built-in _schemes:"
+msgstr "Beépített _sémák:"
+
+#: ../terminatorlib/preferences.glade.h:111
+msgid "Color p_alette:"
+msgstr "Színpaletta:"
+
+#: ../terminatorlib/preferences.glade.h:112
+msgid "Show b_old text in bright colors"
+msgstr "A félkövér szöveg jelenjen meg élénk színekkel"
+
+#: ../terminatorlib/preferences.glade.h:113
+msgid "Colors"
+msgstr "Szinek"
+
+#: ../terminatorlib/preferences.glade.h:114
+msgid "_Solid color"
+msgstr "Egyszínű szín"
+
+#: ../terminatorlib/preferences.glade.h:115
+msgid "_Transparent background"
+msgstr "Átlátszó háttér"
+
+#: ../terminatorlib/preferences.glade.h:116
+msgid "Background Image"
+msgstr "Háttérkép"
+
+#: ../terminatorlib/preferences.glade.h:117
+msgid "Background Image File:"
+msgstr "Háttérkép fájl"
+
+#: ../terminatorlib/preferences.glade.h:118
+msgid "Choose file"
+msgstr "Válasszon fájlt"
+
+#: ../terminatorlib/preferences.glade.h:119
+msgid "S_hade background:"
+msgstr "Háttér árnyékolása:"
+
+#: ../terminatorlib/preferences.glade.h:120
+msgid "<small><i>None</i></small>"
+msgstr "<small><i>Semmi</i></small>"
+
+#: ../terminatorlib/preferences.glade.h:121
+msgid "<small><i>Maximum</i></small>"
+msgstr "<small><i>Maximális</i></small>"
+
+#: ../terminatorlib/preferences.glade.h:122
+msgid "Background"
+msgstr "Háttér"
+
+#: ../terminatorlib/preferences.glade.h:123
+msgid "_Scrollbar is:"
+msgstr "Görgetősáv:"
+
+#: ../terminatorlib/preferences.glade.h:124
+msgid "Scroll on _output"
+msgstr "A kimenet hatására görgessen"
+
+#: ../terminatorlib/preferences.glade.h:125
+msgid "Scroll on _keystroke"
+msgstr "Billentyűleütés hatására görgessen"
+
+#: ../terminatorlib/preferences.glade.h:126
+msgid "Infinite Scrollback"
+msgstr "Végtelenségig lehessen visszagörgetni"
+
+#: ../terminatorlib/preferences.glade.h:127
+msgid "Scroll_back:"
+msgstr "Visszagörgetés:"
+
+#: ../terminatorlib/preferences.glade.h:128
+msgid "lines"
+msgstr "sorok"
+
+#: ../terminatorlib/preferences.glade.h:129
+msgid "Scrolling"
+msgstr "Görgetés"
+
+#: ../terminatorlib/preferences.glade.h:130
+msgid ""
+"<small><i><b>Note:</b> These options may cause some applications to behave "
+"incorrectly.  They are only here to allow you to work around certain "
+"applications and operating systems that expect different terminal "
+"behavior.</i></small>"
+msgstr ""
+"<small><i><b>Megjegyzés:</b> Eezek a beállítások egyes alkalmazások hibás "
+"működését okozhatják. Csak azért vannak itt, hogy lehetővé tegyék bizonyos "
+"alkalmazások és operációs rendszerek megkerülését, amelyek eltérő "
+"terminálviselkedést várnak el.</i></small>"
+
+#: ../terminatorlib/preferences.glade.h:131
+msgid "_Backspace key generates:"
+msgstr "_Backspace billentyű a következőket generálja:"
+
+#: ../terminatorlib/preferences.glade.h:132
+msgid "_Delete key generates:"
+msgstr "A _Delete billentyű a következőket generálja:"
+
+#: ../terminatorlib/preferences.glade.h:133
+msgid "_Reset Compatibility Options to Defaults"
+msgstr "_Reset kompatibilitási beállítások az alapértelmezett értékekre"
+
+#: ../terminatorlib/preferences.glade.h:134
+msgid "Compatibility"
+msgstr "Kompatibilitás"
+
+#: ../terminatorlib/preferences.glade.h:135
+msgid "Focused"
+msgstr "Fókuszált"
+
+#: ../terminatorlib/preferences.glade.h:136
+msgid "Inactive"
+msgstr "Inaktív"
+
+#: ../terminatorlib/preferences.glade.h:137
+msgid "Receiving"
+msgstr "Fogadás"
+
+#: ../terminatorlib/preferences.glade.h:138
+msgid "Hide size from title"
+msgstr "Méret elrejtése a címsorról"
+
+#: ../terminatorlib/preferences.glade.h:139
+msgid "_Use the system font"
+msgstr "Használja a rendszer betűtípusát"
+
+#: ../terminatorlib/preferences.glade.h:140
+msgid "Choose A Titlebar Font"
+msgstr "Válasszon egy betűtípust a címsorhoz."
+
+#: ../terminatorlib/preferences.glade.h:141
+msgid "Titlebar"
+msgstr "Címsor"
+
+#: ../terminatorlib/preferences.glade.h:142
+#: ../terminatorlib/terminal_popup_menu.py:204
+msgid "Profiles"
+msgstr "Profilok"
+
+#: ../terminatorlib/preferences.glade.h:144
+msgid "Type"
+msgstr "Tipus"
+
+#: ../terminatorlib/preferences.glade.h:146
+msgid "Profile:"
+msgstr "Profil:"
+
+#: ../terminatorlib/preferences.glade.h:147
+msgid "Custom command:"
+msgstr "Egyedi parancs:"
+
+#: ../terminatorlib/preferences.glade.h:148
+msgid "Working directory:"
+msgstr "Munkakönyvtár:"
+
+#: ../terminatorlib/preferences.glade.h:149
+msgid "Layouts"
+msgstr "Elrendezések"
+
+#: ../terminatorlib/preferences.glade.h:150
+msgid "Action"
+msgstr "Művelet"
+
+#: ../terminatorlib/preferences.glade.h:151
+msgid "Keybinding"
+msgstr "Billentyűkötés"
+
+#: ../terminatorlib/preferences.glade.h:152
+msgid "Keybindings"
+msgstr "Billentyűkötések"
+
+#: ../terminatorlib/preferences.glade.h:153
+msgid "Plugin"
+msgstr "Kiegészítő"
+
+#: ../terminatorlib/preferences.glade.h:154
+msgid "This plugin has no configuration options"
+msgstr "Ennek a beépülő modulnak nincsenek konfigurációs lehetőségei"
+
+#: ../terminatorlib/preferences.glade.h:155
+msgid "Plugins"
+msgstr "Beépülőmodulok"
+
+#: ../terminatorlib/preferences.glade.h:158
+msgid "Version: 2.1.1"
+msgstr "Verzió: 2.1.1"
+
+#: ../terminatorlib/preferences.glade.h:159
+msgid ""
+"The goal of this project is to produce a useful tool for arranging terminals. It is inspired by programs such as gnome-multi-term, quadkonsole, etc. in that the main focus is arranging terminals in grids (tabs is the most common default method, which Terminator also supports).\n"
+"\n"
+"Much of the behavior of Terminator is based on GNOME Terminal, and we are adding more features from that as time goes by, but we also want to extend out in different directions with useful features for sysadmins and other users. If you have any suggestions, please file wishlist bugs! (see left for the Development link)"
+msgstr ""
+"Ennek a projektnek a célja, hogy egy hasznos eszközt hozzon létre amely a terminálok elrendezését szolgálja. Olyan programok ihlették, mint a gnome-multi-term, quadkonsole stb., mivel ezeknél a fő hangsúly szintén az egyes terminálablakok rácsos elrendezésén van. (A fülek a leggyakoribb alapértelmezett módszer, amelyet a Terminator is támogat).\n"
+"A Terminátor viselkedésének nagy része a GNOME Terminálon alapul, és az idő előrehaladtával ebből további funkciókat adunk hozzá, de szeretnénk a rendszergazdák és más felhasználók számára is hasznos funkciókkal bővíteni különböző irányokba. Ha bármilyen javaslata van, kérjük, küldje az el nekünk a el a kívánságlista hibák listájára! (A fejlesztéshez tartozó linket lásd balra)."
+
+#: ../terminatorlib/preferences.glade.h:162
+msgid "The Manual"
+msgstr "A kézikönyv"
+
+#: ../terminatorlib/preferences.glade.h:163
+msgid ""
+"<a href=\"https://github.com/gnome-terminator/terminator\">Development</a>\n"
+"<a href=\"https://github.com/gnome-terminator/terminator/issues\">Bugs / Enhancements</a>"
+msgstr ""
+"<a href=\"https://github.com/gnome-terminator/terminator\">Fejlesztés</a>\n"
+"<a href=\"https://github.com/gnome-terminator/terminator/issues\">Hibák / Javítások</a>"
+
+#: ../terminatorlib/preferences.glade.h:165
+msgid "About"
+msgstr "Névjegy"
+
+#: ../terminatorlib/prefseditor.py:104
+msgid "Increase font size"
+msgstr "Betűméret növelése"
+
+#: ../terminatorlib/prefseditor.py:105
+msgid "Decrease font size"
+msgstr "Betűméret csökkentése"
+
+#: ../terminatorlib/prefseditor.py:106
+msgid "Restore original font size"
+msgstr "Eredeti betűméret visszaállítása"
+
+#: ../terminatorlib/prefseditor.py:107
+msgid "Increase font size on all terminals"
+msgstr "Betűméret növelése az összes terminálban"
+
+#: ../terminatorlib/prefseditor.py:108
+msgid "Decrease font size on all terminals"
+msgstr "Betűméret csökkentése az összes terminálban"
+
+#: ../terminatorlib/prefseditor.py:109
+msgid "Restore original font size on all terminals"
+msgstr "Eredeti betűméret visszaállítása az összes terminálban"
+
+#: ../terminatorlib/prefseditor.py:110
+msgid "Create a new tab"
+msgstr "Új fül létrehozása"
+
+#: ../terminatorlib/prefseditor.py:111 ../terminatorlib/prefseditor.py:113
+msgid "Focus the next terminal"
+msgstr "Következő terminálra fókuszálás"
+
+#: ../terminatorlib/prefseditor.py:112 ../terminatorlib/prefseditor.py:114
+msgid "Focus the previous terminal"
+msgstr "Előző terminálra fókuszálás"
+
+#: ../terminatorlib/prefseditor.py:115
+msgid "Focus the terminal above"
+msgstr "Felső terminálra fókuszálás"
+
+#: ../terminatorlib/prefseditor.py:116
+msgid "Focus the terminal below"
+msgstr "Alsó terminálra fókuszálás"
+
+#: ../terminatorlib/prefseditor.py:117
+msgid "Focus the terminal left"
+msgstr "Baloldali terminálra fókuszálás"
+
+#: ../terminatorlib/prefseditor.py:118
+msgid "Focus the terminal right"
+msgstr "Jobboldali terminálra fókuszálás"
+
+#: ../terminatorlib/prefseditor.py:119
+msgid "Rotate terminals clockwise"
+msgstr "Óramutatóval megegyező irányba történő terminálforgatás"
+
+#: ../terminatorlib/prefseditor.py:120
+msgid "Rotate terminals counter-clockwise"
+msgstr "Óramutatóval ellentétes irányba történő terminálforgatás"
+
+#: ../terminatorlib/prefseditor.py:121
+msgid "Split horizontally"
+msgstr "Kettéválasztás vízszintesen"
+
+#: ../terminatorlib/prefseditor.py:122
+msgid "Split vertically"
+msgstr "Kettéválasztás függőlegesen"
+
+#: ../terminatorlib/prefseditor.py:123
+msgid "Close terminal"
+msgstr "Terminál bezárása"
+
+#: ../terminatorlib/prefseditor.py:124
+msgid "Copy selected text"
+msgstr "Kijelölt szöveg mentése"
+
+#: ../terminatorlib/prefseditor.py:125
+msgid "Paste clipboard"
+msgstr "Vágólap beillesztése"
+
+#: ../terminatorlib/prefseditor.py:126
+msgid "Paste primary selection"
+msgstr "Elsődleges kijelölés beillesztése"
+
+#: ../terminatorlib/prefseditor.py:127
+msgid "Show/Hide the scrollbar"
+msgstr "Görgetősáv mutatása/rejtése"
+
+#: ../terminatorlib/prefseditor.py:128
+msgid "Search terminal scrollback"
+msgstr "Terminál visszagörgetés keresése"
+
+#: ../terminatorlib/prefseditor.py:129
+msgid "Scroll upwards one page"
+msgstr "Görgetés egy oldalt felfelé"
+
+#: ../terminatorlib/prefseditor.py:130
+msgid "Scroll downwards one page"
+msgstr "Görgetés egy oldalt lefelé"
+
+#: ../terminatorlib/prefseditor.py:131
+msgid "Scroll upwards half a page"
+msgstr "Görgetés fél oldalt felfelé"
+
+#: ../terminatorlib/prefseditor.py:132
+msgid "Scroll downwards half a page"
+msgstr "Görgetés fél oldalt lefelé"
+
+#: ../terminatorlib/prefseditor.py:133
+msgid "Scroll upwards one line"
+msgstr "Görgetés egy sort felfelé"
+
+#: ../terminatorlib/prefseditor.py:134
+msgid "Scroll downwards one line"
+msgstr "Görgetés egy sort lefelé"
+
+#: ../terminatorlib/prefseditor.py:135
+msgid "Close window"
+msgstr "Ablak bezárása"
+
+#: ../terminatorlib/prefseditor.py:136
+msgid "Resize the terminal up"
+msgstr "Terminál átméretezése felfelé"
+
+#: ../terminatorlib/prefseditor.py:137
+msgid "Resize the terminal down"
+msgstr "Terminál átméretezése lefelé"
+
+#: ../terminatorlib/prefseditor.py:138
+msgid "Resize the terminal left"
+msgstr "Terminál átméretezése balra"
+
+#: ../terminatorlib/prefseditor.py:139
+msgid "Resize the terminal right"
+msgstr "Terminál átméretezése jobbra"
+
+#: ../terminatorlib/prefseditor.py:140
+msgid "Move the tab right"
+msgstr "Fül mozgatása jobbra"
+
+#: ../terminatorlib/prefseditor.py:141
+msgid "Move the tab left"
+msgstr "Fül mozgatása balra"
+
+#: ../terminatorlib/prefseditor.py:142
+msgid "Maximize terminal"
+msgstr "Terminál maximalizálása"
+
+#: ../terminatorlib/prefseditor.py:143
+msgid "Zoom terminal"
+msgstr "Terminál nagyítása"
+
+#: ../terminatorlib/prefseditor.py:144
+msgid "Switch to the next tab"
+msgstr "Következő fülre váltás"
+
+#: ../terminatorlib/prefseditor.py:145
+msgid "Switch to the previous tab"
+msgstr "Előző fülre váltás"
+
+#: ../terminatorlib/prefseditor.py:146
+msgid "Switch to the first tab"
+msgstr "Első fülre váltás"
+
+#: ../terminatorlib/prefseditor.py:147
+msgid "Switch to the second tab"
+msgstr "Második fülre váltás"
+
+#: ../terminatorlib/prefseditor.py:148
+msgid "Switch to the third tab"
+msgstr "Harmadik fülre váltás"
+
+#: ../terminatorlib/prefseditor.py:149
+msgid "Switch to the fourth tab"
+msgstr "Negyedik fülre váltás"
+
+#: ../terminatorlib/prefseditor.py:150
+msgid "Switch to the fifth tab"
+msgstr "Ötödik fülre váltás"
+
+#: ../terminatorlib/prefseditor.py:151
+msgid "Switch to the sixth tab"
+msgstr "Hatodik fülre váltás"
+
+#: ../terminatorlib/prefseditor.py:152
+msgid "Switch to the seventh tab"
+msgstr "Hetedik fülre váltás"
+
+#: ../terminatorlib/prefseditor.py:153
+msgid "Switch to the eighth tab"
+msgstr "Nyolcadik fülre váltás"
+
+#: ../terminatorlib/prefseditor.py:154
+msgid "Switch to the ninth tab"
+msgstr "Kilencedik fülre váltás"
+
+#: ../terminatorlib/prefseditor.py:155
+msgid "Switch to the tenth tab"
+msgstr "Tizedik fülre váltás"
+
+#: ../terminatorlib/prefseditor.py:156
+msgid "Toggle fullscreen"
+msgstr "Teljes képernyőre váltás"
+
+#: ../terminatorlib/prefseditor.py:157
+msgid "Reset the terminal"
+msgstr "Terminál visszaállítása"
+
+#: ../terminatorlib/prefseditor.py:158
+msgid "Reset and clear the terminal"
+msgstr "Terminál visszaállítása és törlése"
+
+#: ../terminatorlib/prefseditor.py:159
+msgid "Toggle window visibility"
+msgstr "Ablak láthatóságának váltása"
+
+#: ../terminatorlib/prefseditor.py:160
+msgid "Create new group"
+msgstr "Új csoport létrehozása"
+
+#: ../terminatorlib/prefseditor.py:161
+msgid "Group all terminals"
+msgstr "Minden terminál csoportosítása"
+
+#: ../terminatorlib/prefseditor.py:162
+msgid "Group/Ungroup all terminals"
+msgstr "Terminálok csoportosítása/csoporttalanítása"
+
+#: ../terminatorlib/prefseditor.py:163
+msgid "Ungroup all terminals"
+msgstr "Összes terminál csoporttalanítása"
+
+#: ../terminatorlib/prefseditor.py:164
+msgid "Group terminals in window"
+msgstr "Terminálok csoportosítása ablakban"
+
+#: ../terminatorlib/prefseditor.py:165
+msgid "Group/Ungroup terminals in window"
+msgstr "Terminálok csoportosítása/csoporttalanítása ablakban"
+
+#: ../terminatorlib/prefseditor.py:166
+msgid "Ungroup terminals in window"
+msgstr "Terminálok csoporttalanítása ablakban"
+
+#: ../terminatorlib/prefseditor.py:167
+msgid "Group terminals in tab"
+msgstr "Terminálok csoportosítása fülön"
+
+#: ../terminatorlib/prefseditor.py:168
+msgid "Group/Ungroup terminals in tab"
+msgstr "Terminálok csoportosítása/csoporttalanítása fülön"
+
+#: ../terminatorlib/prefseditor.py:169
+msgid "Ungroup terminals in tab"
+msgstr "Terminálok csoporttalanítása fülön"
+
+#: ../terminatorlib/prefseditor.py:170
+msgid "Create a new window"
+msgstr "Új ablak létrehozása"
+
+#: ../terminatorlib/prefseditor.py:171
+msgid "Spawn a new Terminator process"
+msgstr "Új Terminátor folyamat indítása"
+
+#: ../terminatorlib/prefseditor.py:172
+msgid "Don't broadcast key presses"
+msgstr "Ne küldje kifelé a gombnyomásokat"
+
+#: ../terminatorlib/prefseditor.py:173
+msgid "Broadcast key presses to group"
+msgstr "Küldje kifelé a gombnyomásokat a csoportnak"
+
+#: ../terminatorlib/prefseditor.py:174
+msgid "Broadcast key events to all"
+msgstr "Küldje a gombnyomás eseményeket mindenkinek"
+
+#: ../terminatorlib/prefseditor.py:175
+msgid "Insert terminal number"
+msgstr "Terminál szám beillesztése"
+
+#: ../terminatorlib/prefseditor.py:176
+msgid "Insert padded terminal number"
+msgstr "Beágyazott terminál számának beillesztése"
+
+#: ../terminatorlib/prefseditor.py:177
+msgid "Edit window title"
+msgstr "Ablak címének szerkesztése"
+
+#: ../terminatorlib/prefseditor.py:178
+msgid "Edit terminal title"
+msgstr "Terminál címének szerkesztése"
+
+#: ../terminatorlib/prefseditor.py:179
+msgid "Edit tab title"
+msgstr "Fül címének szerkesztése"
+
+#: ../terminatorlib/prefseditor.py:180
+msgid "Open layout launcher window"
+msgstr "Elrendezés ablak megnyitása"
+
+#: ../terminatorlib/prefseditor.py:181
+msgid "Switch to next profile"
+msgstr "Váltás a következő profilra"
+
+#: ../terminatorlib/prefseditor.py:182
+msgid "Switch to previous profile"
+msgstr "Váltás az előző profilra"
+
+#: ../terminatorlib/prefseditor.py:183
+msgid "Open the Preferences window"
+msgstr "Beállítások ablak megnyitása"
+
+#: ../terminatorlib/prefseditor.py:184
+msgid "Open the manual"
+msgstr "Kézikönyv megnyitása"
+
+#: ../terminatorlib/prefseditor.py:1366
+msgid "New Profile"
+msgstr "Új profil"
+
+#: ../terminatorlib/prefseditor.py:1409 ../terminatorlib/prefseditor.py:1414
+msgid "New Layout"
+msgstr "Új elrendezés"
+
+#. Label
+#: ../terminatorlib/searchbar.py:56
+msgid "Search:"
+msgstr "Keresés:"
+
+#: ../terminatorlib/searchbar.py:68
+msgid "Close Search bar"
+msgstr "Keresési mező bezárása"
+
+#: ../terminatorlib/terminal_popup_menu.py:58
+msgid "_Send email to..."
+msgstr "E-mail küldése..."
+
+#: ../terminatorlib/terminal_popup_menu.py:59
+msgid "_Copy email address"
+msgstr "E-mail cím másolása"
+
+#: ../terminatorlib/terminal_popup_menu.py:61
+msgid "Ca_ll VoIP address"
+msgstr "VoIP cím hívása"
+
+#: ../terminatorlib/terminal_popup_menu.py:62
+msgid "_Copy VoIP address"
+msgstr "VoIP cím másolása"
+
+#: ../terminatorlib/terminal_popup_menu.py:83
+msgid "_Open link"
+msgstr "Hivatkozás _megnyitása"
+
+#: ../terminatorlib/terminal_popup_menu.py:85
+msgid "_Copy address"
+msgstr "Cím másolása"
+
+#: ../terminatorlib/terminal_popup_menu.py:101
+msgid "_Copy"
+msgstr "Másolás"
+
+#: ../terminatorlib/terminal_popup_menu.py:106
+msgid "_Paste"
+msgstr "Beillesztés"
+
+#: ../terminatorlib/terminal_popup_menu.py:112
+msgid "Set W_indow Title"
+msgstr "Ablak címének beállítása"
+
+#: ../terminatorlib/terminal_popup_menu.py:117
+msgid "Split H_orizontally"
+msgstr "Felosztás _vízszintesen"
+
+#: ../terminatorlib/terminal_popup_menu.py:127
+msgid "Split V_ertically"
+msgstr "Felosztás _függőlegesen"
+
+#: ../terminatorlib/terminal_popup_menu.py:137
+msgid "Open _Tab"
+msgstr "_Lap megnyitása"
+
+#: ../terminatorlib/terminal_popup_menu.py:143
+msgid "Open _Debug Tab"
+msgstr "Hibakereső fül megnyitása"
+
+#: ../terminatorlib/terminal_popup_menu.py:150
+msgid "_Close"
+msgstr "Bezárás"
+
+#: ../terminatorlib/terminal_popup_menu.py:159
+msgid "_Zoom terminal"
+msgstr "Terminál nagyítása"
+
+#: ../terminatorlib/terminal_popup_menu.py:164
+msgid "Ma_ximize terminal"
+msgstr "Terminál maximalizálása"
+
+#: ../terminatorlib/terminal_popup_menu.py:171
+msgid "_Restore all terminals"
+msgstr "Minden terminál visszaállítása"
+
+#: ../terminatorlib/terminal_popup_menu.py:178
+msgid "Grouping"
+msgstr "Csoportosítás"
+
+#: ../terminatorlib/terminal_popup_menu.py:186
+msgid "Relaunch Command"
+msgstr "Parancs újra futtatása"
+
+#: ../terminatorlib/terminal_popup_menu.py:191
+msgid "Show _scrollbar"
+msgstr "Gördítő_sáv megjelenítése"
+
+#: ../terminatorlib/terminal_popup_menu.py:248
+msgid "_Layouts..."
+msgstr "Elrendezések..."
+
+#: ../terminatorlib/terminal.py:481
+msgid "N_ew group..."
+msgstr "Új csoport..."
+
+#: ../terminatorlib/terminal.py:487
+msgid "_None"
+msgstr "Semmi"
+
+#: ../terminatorlib/terminal.py:507
+#, python-format
+msgid "Remove group %s"
+msgstr "%s csoport eltávolítása"
+
+#: ../terminatorlib/terminal.py:512
+msgid "G_roup all in window"
+msgstr "Összes csoportosítása ablakban"
+
+#: ../terminatorlib/terminal.py:517
+msgid "Ungro_up all in window"
+msgstr "Összes csoporttalanítása ablakban"
+
+#: ../terminatorlib/terminal.py:522
+msgid "G_roup all in tab"
+msgstr "Összes csoportosítása fülön"
+
+#: ../terminatorlib/terminal.py:527
+msgid "Ungro_up all in tab"
+msgstr "Összes csoporttalanítása fülön"
+
+#: ../terminatorlib/terminal.py:532
+msgid "Remove all groups"
+msgstr "Minden csoport eltávolítása"
+
+#: ../terminatorlib/terminal.py:539
+#, python-format
+msgid "Close group %s"
+msgstr "%s csoport bezárása"
+
+#: ../terminatorlib/terminal.py:549
+msgid "Broadcast _all"
+msgstr "Mind kifelé küdése"
+
+#: ../terminatorlib/terminal.py:550
+msgid "Broadcast _group"
+msgstr "Kiküldés csoportnak"
+
+#: ../terminatorlib/terminal.py:551
+msgid "Broadcast _off"
+msgstr "Kifelé küldés leállítása"
+
+#: ../terminatorlib/terminal.py:567
+msgid "_Split to this group"
+msgstr "Szétválasztani ebbe a csoportba"
+
+#: ../terminatorlib/terminal.py:572
+msgid "Auto_clean groups"
+msgstr "Csoportok automatikus tisztítása"
+
+#: ../terminatorlib/terminal.py:579
+msgid "_Insert terminal number"
+msgstr "Terminál szám beillesztése"
+
+#: ../terminatorlib/terminal.py:583
+msgid "Insert _padded terminal number"
+msgstr "Helyezze be a beágyazott terminálszámot"
+
+#: ../terminatorlib/terminal.py:1492
+msgid "Unable to find a shell"
+msgstr "Parancsértelmező nem található"
+
+#: ../terminatorlib/terminal.py:1546
+msgid "Unable to start shell:"
+msgstr "Shell indítása nem lehetséges"
+
+#: ../terminatorlib/terminal.py:2000
+msgid "Rename Window"
+msgstr "Ablak átnevezése"
+
+#: ../terminatorlib/terminal.py:2008
+msgid "Enter a new title for the Terminator window..."
+msgstr "Adjon meg új címet a Terminátor ablaknak..."
+
+#: ../terminatorlib/titlebar.py:112
+msgid "[INACTIVE: Right-Click for Relaunch option] "
+msgstr "[INAKTÍV: Kattintson jobb gombbal az újraindítás lehetőségért]"
+
+#: ../terminatorlib/titlebar.py:258
+msgid "Alpha"
+msgstr "Alfa"
+
+#: ../terminatorlib/titlebar.py:258
+msgid "Beta"
+msgstr "Béta"
+
+#: ../terminatorlib/titlebar.py:258
+msgid "Gamma"
+msgstr "Gamm"
+
+#: ../terminatorlib/titlebar.py:258
+msgid "Delta"
+msgstr "Delta"
+
+#: ../terminatorlib/titlebar.py:258
+msgid "Epsilon"
+msgstr "Epszilon"
+
+#: ../terminatorlib/titlebar.py:258
+msgid "Zeta"
+msgstr "Dzéta"
+
+#: ../terminatorlib/titlebar.py:258
+msgid "Eta"
+msgstr "Éta"
+
+#: ../terminatorlib/titlebar.py:259
+msgid "Theta"
+msgstr "Théta"
+
+#: ../terminatorlib/titlebar.py:259
+msgid "Iota"
+msgstr "Ióta"
+
+#: ../terminatorlib/titlebar.py:259
+msgid "Kappa"
+msgstr "Kappa"
+
+#: ../terminatorlib/titlebar.py:259
+msgid "Lambda"
+msgstr "Lambda"
+
+#: ../terminatorlib/titlebar.py:259
+msgid "Mu"
+msgstr "Mű"
+
+#: ../terminatorlib/titlebar.py:259
+msgid "Nu"
+msgstr "Nű"
+
+#: ../terminatorlib/titlebar.py:259
+msgid "Xi"
+msgstr "Kszí"
+
+#: ../terminatorlib/titlebar.py:260
+msgid "Omicron"
+msgstr "Omikron"
+
+#: ../terminatorlib/titlebar.py:260
+msgid "Pi"
+msgstr "Pí"
+
+#: ../terminatorlib/titlebar.py:260
+msgid "Rho"
+msgstr "Ró"
+
+#: ../terminatorlib/titlebar.py:260
+msgid "Sigma"
+msgstr "Szigma"
+
+#: ../terminatorlib/titlebar.py:260
+msgid "Tau"
+msgstr "Tau"
+
+#: ../terminatorlib/titlebar.py:260
+msgid "Upsilon"
+msgstr "Üpszilon"
+
+#: ../terminatorlib/titlebar.py:260
+msgid "Phi"
+msgstr "Fí"
+
+#: ../terminatorlib/titlebar.py:261
+msgid "Chi"
+msgstr "Khí"
+
+#: ../terminatorlib/titlebar.py:261
+msgid "Psi"
+msgstr "Pszí"
+
+#: ../terminatorlib/titlebar.py:261
+msgid "Omega"
+msgstr "Ómega"
+
+#: ../terminatorlib/window.py:284 ../terminatorlib/window.py:289
+msgid "window"
+msgstr "ablak"
+
+#: ../terminatorlib/window.py:773
+#, python-format
+msgid "Window group %s"
+msgstr "Ablakcsoport %s"
+
+#: ../terminatorlib/window.py:799
+#, python-format
+msgid "Tab %d"
+msgstr "Fül %d"

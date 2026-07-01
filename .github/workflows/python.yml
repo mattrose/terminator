@@ -1,0 +1,47 @@
+name: Python
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    strategy:
+      matrix:
+        python:
+        # - '2.7'
+        # - '3.6'
+        # - '3.7'
+        # - '3.8'
+        - '3.10'
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python }}
+
+    - name: Update apt repositories
+      run: sudo apt-get update
+
+    - name: Install native dependencies
+      run: >
+        sudo apt-get install -y --no-install-recommends
+        gobject-introspection gir1.2-glib-2.0 gir1.2-keybinder-3.0 gir1.2-gtk-3.0 gir1.2-vte-2.91 gir1.2-notify-0.7
+        python3-pytest python3-cairo python3-gi-cairo python3-psutil
+        gettext intltool
+        libdbus-glib-1-dev libgirepository1.0-dev libcairo-dev
+        xvfb
+
+    - name: Compile all scripts
+      run: python -m compileall -f terminatorlib/ tests/ remotinator terminator
+
+    - name: Run tests
+      run: |
+        xvfb-run -a pytest-3

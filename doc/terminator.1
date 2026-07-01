@@ -1,0 +1,485 @@
+'\" t
+.\"     Title: terminator
+.\"    Author: [see the "AUTHOR(S)" section]
+.\" Generator: Asciidoctor 2.0.18
+.\"      Date: 2023-04-01
+.\"    Manual: Manual for Terminator
+.\"    Source: Terminator
+.\"  Language: English
+.\"
+.TH "TERMINATOR" "1" "2023-04-01" "Terminator" "Manual for Terminator"
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.ss \n[.ss] 0
+.nh
+.ad l
+.de URL
+\fI\\$2\fP <\\$1>\\$3
+..
+.als MTO URL
+.if \n[.g] \{\
+.  mso www.tmac
+.  am URL
+.    ad l
+.  .
+.  am MTO
+.    ad l
+.  .
+.  LINKSTYLE blue R < >
+.\}
+.SH "NAME"
+terminator \- multiple GNOME terminals in one window
+.SH "SYNOPSIS"
+.sp
+\fBterminator\fP [\fIoptions\fP]
+.SH "DESCRIPTION"
+.sp
+This manual page documents \fBTerminator\fP, a terminal emulator application.
+.sp
+\fBTerminator\fP is a program that allows users to set up flexible
+arrangements of GNOME terminals. It is aimed at those who normally
+arrange lots of terminals near each other, but don\(cqt want to use a
+frame based window manager.
+.SH "OPTIONS"
+.sp
+This program follows the usual GNU command line syntax, with long
+options starting with two dashes (`\-\*(Aq).
+A summary of options is included below.
+.sp
+\fB\-h\fP, \fB\-\-help\fP
+.RS 4
+Show summary of options.
+.RE
+.sp
+\fB\-v\fP, \fB\-\-version\fP
+.RS 4
+Show the version of the Terminator installation.
+.RE
+.sp
+\fB\-m\fP, \fB\-M\fP, \fB\-\-maximise\fP, \fB\-\-maximize\fP
+.RS 4
+Start with a maximised window.
+.RE
+.sp
+\fB\-f\fP, \fB\-\-fullscreen\fP
+.RS 4
+Start with a fullscreen window.
+.RE
+.sp
+\fB\-b\fP, \fB\-\-borderless\fP
+.RS 4
+Instruct the window manager not to render borders/decorations on the
+Terminator window (this works well with \-\-maximise).
+.RE
+.sp
+\fB\-H\fP, \fB\-\-hidden\fP
+.RS 4
+Hide the Terminator window by default. Its visibility can be toggled
+with the \fBhide_window\fP keyboard shortcut (Ctrl+Shift+Alt+A by default).
+.RE
+.sp
+\fB\-T\fP \fIFORCEDTITLE\fP, \fB\-\-title\fP=\fIFORCEDTITLE\fP
+.RS 4
+Force the Terminator window to use a specific name rather than updating
+it dynamically based on the wishes of the child shell.
+.RE
+.sp
+\fB\-\-geometry\fP=\fIGEOMETRY\fP
+.RS 4
+Specify the preferred size and position of Terminator\(cqs window;
+see \fBX\fP(7).
+.RE
+.sp
+\fB\-e\fP \fICOMMAND\fP, \fB\-\-command\fP=\fICOMMAND\fP
+.RS 4
+Run the specified command instead of the default shell or profile
+specified command.
+.br
+Note: if Terminator is launched as x\-terminal\-emulator \-e behaves like
+\-x, and the longform becomes \-\-execute2=COMMAND.
+.RE
+.sp
+\fB\-x\fP \fICOMMAND\fP [\fIARGS\fP], \fB\-\-execute\fP=\fICOMMAND\fP [\fIARGS\fP]
+.RS 4
+Run \fBthe rest of the command line\fP instead of the default shell or
+profile specified command.
+.RE
+.sp
+\fB\-\-working\-directory\fP=\fIDIR\fP
+.RS 4
+Set the terminal\(cqs working directory.
+.RE
+.sp
+\fB\-g\fP \fIFILE\fP, \fB\-\-config\fP=\fIFILE\fP
+.RS 4
+Use the specified file for configuration.
+.RE
+.sp
+\fB\-r\fP \fIROLE\fP, \fB\-\-role\fP=\fIROLE\fP
+.RS 4
+Set a custom WM_WINDOW_ROLE property on the window.
+.RE
+.sp
+\fB\-l\fP \fILAYOUT\fP, \fB\-\-layout\fP=\fILAYOUT\fP
+.RS 4
+Start Terminator with a specific layout. The argument here is the name
+of a saved layout.
+.RE
+.sp
+\fB\-s\fP \fILAYOUT\fP, \fB\-\-select\-layout\fP=\fILAYOUT\fP
+.RS 4
+Open the layout launcher window instead of the normal terminal.
+.RE
+.sp
+\fB\-p\fP, \fB\-\-profile\fP=\fIPROFILE\fP
+.RS 4
+Use a different profile as the default.
+.RE
+.sp
+\fB\-i\fP, \fB\-\-icon\fP=\fIFORCEDICON\fP
+.RS 4
+Set a custom icon for the window (by file or name)
+.RE
+.sp
+\fB\-u\fP, \fB\-\-no\-dbus\fP
+.RS 4
+Disable DBus.
+.RE
+.sp
+\fB\-d\fP, \fB\-\-debug\fP
+.RS 4
+Enable debugging output (please use this when reporting bugs). This can
+be specified twice to enable a built\-in python debugging server.
+.RE
+.sp
+\fB\-\-debug\-classes\fP=\fIDEBUG_CLASSES\fP
+.RS 4
+If this is specified as a comma separated list, debugging output will
+only be printed from the specified classes.
+.RE
+.sp
+\fB\-\-debug\-methods\fP=\fIDEBUG_METHODS\fP
+.RS 4
+If this is specified as a comma separated list, debugging output will
+only be printed from the specified functions. If this is specified in
+addition to \-\-debug\-classes, only the intersection of the two lists will
+be displayed.
+.RE
+.sp
+\fB\-\-new\-tab\fP
+.RS 4
+If this is specified and Terminator is already running, DBus will be
+used to spawn a new tab in the first Terminator window.
+.RE
+.sp
+\fB\-\-toggle\-visibility\fP
+.RS 4
+If this is specified and Terminator is already running, DBus will be
+used to toggle Terminator window visibility. Usable under Wayland to
+replace hide keyboad shortcut.
+.RE
+.SH "KEYBINDINGS"
+.sp
+The following default keybindings can be used to control Terminator.
+Most of these keybindings can be changed in the Preferences.
+.sp
+\fBF1\fP
+.RS 4
+Launches the full HTML manual.
+.RE
+.SS "Creation & Destruction"
+.sp
+The following items relate to creating and destroying terminals.
+.sp
+\fBCtrl+Shift+O\fP
+.RS 4
+Split terminals H\fIo\fPrizontally.
+.RE
+.sp
+\fBCtrl+Shift+E\fP
+.RS 4
+Split terminals V\fIe\fPrtically.
+.RE
+.sp
+\fBCtrl+Shift+T\fP
+.RS 4
+Open new \fIt\fPab.
+.RE
+.sp
+\fBCtrl+Shift+I\fP
+.RS 4
+Open a new window.
+.br
+(Note: unlike in previous releases, this window is part of the same
+Terminator process.)
+.RE
+.sp
+\fBSuper+I\fP
+.RS 4
+Spawn a new Terminator process.
+.RE
+.sp
+\fBAlt+L\fP
+.RS 4
+Open \fIl\fPayout launcher.
+.RE
+.sp
+\fBCtrl+Shift+W\fP
+.RS 4
+Close the current terminal.
+.RE
+.sp
+\fBCtrl+Shift+Q\fP
+.RS 4
+Close the current window.
+.RE
+.SS "Navigation"
+.sp
+The following items relate to moving between and around terminals.
+.sp
+\fBAlt+Up\fP
+.RS 4
+Move to the terminal \fBabove\fP the current one.
+.RE
+.sp
+\fBAlt+Down\fP
+.RS 4
+Move to the terminal \fBbelow\fP the current one.
+.RE
+.sp
+\fBAlt+Left\fP
+.RS 4
+Move to the terminal \fBleft of\fP the current one.
+.RE
+.sp
+\fBAlt+Right\fP
+.RS 4
+Move to the terminal \fBright of\fP the current one.
+.RE
+.sp
+\fBCtrl+PageDown\fP
+.RS 4
+Move to next tab.
+.RE
+.sp
+\fBCtrl+PageUp\fP
+.RS 4
+Move to previous tab.
+.RE
+.sp
+\fBCtrl+Shift+N\fP or \fBCtrl+Tab\fP
+.RS 4
+Move to the \fIn\fPext terminal within the same tab.
+.br
+.RE
+.sp
+\fBCtrl+Shift+P\fP or \fBCtrl+Shift+Tab\fP
+.RS 4
+Move to the \fIp\fPrevious terminal within the same tab.
+.br
+.RE
+.SS "Organisation"
+.sp
+The following items relate to arranging and resizing terminals.
+.sp
+\fBCtrl+Shift+Right\fP
+.RS 4
+Move parent dragbar \fBright\fP.
+.RE
+.sp
+\fBCtrl+Shift+Left\fP
+.RS 4
+Move parent dragbar \fBleft\fP.
+.RE
+.sp
+\fBCtrl+Shift+Up\fP
+.RS 4
+Move parent dragbar \fBup\fP.
+.RE
+.sp
+\fBCtrl+Shift+Down\fP
+.RS 4
+Move parent dragbar \fBdown\fP.
+.RE
+.sp
+\fBSuper+R\fP
+.RS 4
+\fIR\fPotate terminals clockwise.
+.RE
+.sp
+\fBSuper+Shift+R\fP
+.RS 4
+\fIR\fPotate terminals counter\-clockwise.
+.RE
+.sp
+\fBCtrl+Shift+PageDown\fP
+.RS 4
+Swap tab position with next tab.
+.RE
+.sp
+\fBCtrl+Shift+PageUp\fP
+.RS 4
+Swap tab position with previous tab.
+.RE
+.sp
+\fBDrag and Drop\fP
+.RS 4
+The layout can be modified by moving terminals with Drag and Drop.
+To start dragging a terminal, click and hold on its titlebar.
+Alternatively, hold down \fBCtrl\fP, click and hold the \fBright\fP mouse button.
+Then, \fB**release Ctrl**\fP. You can now drag the terminal to the point
+in the layout you would like it to be. The zone where the terminal would
+be inserted will be highlighted.
+.RE
+.SS "Focus"
+.sp
+The following items relate to helping to focus on a specific terminal.
+.sp
+\fBF11\fP
+.RS 4
+Toggle window to fullscreen.
+.RE
+.sp
+\fBCtrl+Shift+X\fP
+.RS 4
+Toggle between showing all terminals and only showing the current one
+(maximise).
+.RE
+.sp
+\fBCtrl+Shift+Z\fP
+.RS 4
+Toggle between showing all terminals and only showing a scaled version
+of the current one (zoom).
+.RE
+.sp
+\fBCtrl+Shift+Alt+A\fP
+.RS 4
+Hide the initial window. Note that this is a X11 global binding, and can
+only be bound once. On Wayland use window manager keyboard shortcuts to
+call \fBterminator \-\-toggle\-visibility\fP.
+.RE
+.SS "Grouping & Broadcasting"
+.sp
+The following items relate to grouping and broadcasting.
+.sp
+\fBSuper+T\fP
+.RS 4
+Group all terminals in the current tab so that any input sent to one of
+them goes to all of them.
+.RE
+.sp
+\fBSuper+Shift+T\fP
+.RS 4
+Remove grouping from all terminals in the current tab.
+.RE
+.sp
+\fBSuper+G\fP
+.RS 4
+Group all terminals so that any input sent to one of them goes to all of
+them.
+.RE
+.sp
+\fBSuper+Shift+G\fP
+.RS 4
+Remove grouping from all terminals.
+.RE
+.sp
+\fBAlt+A\fP
+.RS 4
+Broadcast to \fIa\fPll terminals.
+.RE
+.sp
+\fBAlt+G\fP
+.RS 4
+Broadcast to \fIg\fProuped terminals.
+.RE
+.sp
+\fBAlt+O\fP
+.RS 4
+Broadcast \fIo\fPff.
+.RE
+.SS "Miscellaneous"
+.sp
+The following items relate to miscellaneous terminal related functions.
+.sp
+\fBCtrl+Shift+C\fP
+.RS 4
+Copy selected text to clipboard.
+.RE
+.sp
+\fBCtrl+Shift+V\fP
+.RS 4
+Paste clipboard text.
+.RE
+.sp
+\fBCtrl+Shift+S\fP
+.RS 4
+Toggle \fIs\fPcrollbar.
+.RE
+.sp
+\fBCtrl+Shift+F\fP
+.RS 4
+Search within terminal scrollback.
+.RE
+.sp
+\fBCtrl+Shift+R\fP
+.RS 4
+Reset terminal state.
+.RE
+.sp
+\fBCtrl+Shift+G\fP
+.RS 4
+Reset terminal state and clear window.
+.RE
+.sp
+\fBCtrl+Plus (+)\fP
+.RS 4
+Increase font size.
+.br
+Note: this may require you to press shift, depending on your keyboard.
+.RE
+.sp
+\fBCtrl+Minus (\-)\fP
+.RS 4
+Decrease font size.
+.br
+Note: this may require you to press shift, depending on your keyboard.
+.RE
+.sp
+\fBCtrl+Zero (0)\fP
+.RS 4
+Restore font size to original setting.
+.RE
+.sp
+\fBCtrl+Alt+W\fP
+.RS 4
+Rename window title.
+.RE
+.sp
+\fBCtrl+Alt+A\fP
+.RS 4
+Rename tab title.
+.RE
+.sp
+\fBCtrl+Alt+X\fP
+.RS 4
+Rename terminal title.
+.RE
+.sp
+\fBSuper+1\fP
+.RS 4
+Insert terminal number, i.e. 1 to 12.
+.RE
+.sp
+\fBSuper+0\fP
+.RS 4
+Insert padded terminal number, i.e. 01 to 12.
+.RE
+.SH "AUTHORS"
+.sp
+Terminator was written by Chris Jones <cmsj@tenshu.net> and others.
+.sp
+This manual page was written by Chris Jones <cmsj@tenshu.net> and others.
+.SH "SEE ALSO"
+.sp
+\fBterminator_config\fP(5)

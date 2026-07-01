@@ -1,0 +1,113 @@
+#!/usr/bin/env python
+#
+#    remotinator - send commands to Terminator via DBus
+#    Copyright (C) 2006-2010  cmsj@tenshu.net
+#
+#    This program is free software; you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, version 2 only.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program; if not, write to the Free Software
+#    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
+#    USA
+
+"""remotinator by Chris Jones <cmsj@tenshu.net>"""
+
+import os
+import sys
+import argparse
+
+from terminatorlib.util import dbg, err
+from terminatorlib.version import APP_VERSION
+try:
+    from terminatorlib import ipc
+except ImportError:
+    err('Unable to initialise Terminator remote library. This probably means dbus is not available')
+    sys.exit(1)
+from terminatorlib.translation import _
+
+APP_NAME='remotinator'
+
+COMMANDS={
+    #  Command             uuid req.    Description
+    'new_window':           [False, _('Open a new window')],
+    'new_tab':              [True,  _('Open a new tab')],
+    'hsplit':               [True,  _('Split the current terminal horizontally')],
+    'vsplit':               [True,  _('Split the current terminal vertically')],
+    'get_terminals':        [False, _('Get a list of all terminals')],
+    'get_focused_terminal': [False, _('Get the uuid of the current focused terminal')],
+    'get_window':           [True,  _('Get the UUID of a parent window')],
+    'get_window_title':     [True,  _('Get the title of a parent window')],
+    'get_tab':              [True,  _('Get the UUID of a parent tab')],
+    'get_tab_title':        [True,  _('Get the title of a parent tab')],
+    'set_tab_title':        [True,  _('Set the title of a parent tab')],
+    'bg_img':               [True,  _('Set the background image')],
+    'bg_img_all':           [False, _('Set the background image for all terminals')],
+    'switch_profile':       [True,  _('Switch current terminal profile')],
+    'switch_profile_all':   [False, _('Switch profile of all currently running terminals')],
+    }
+
+if __name__ == '__main__':
+    dbg ("%s starting up, version %s" % (APP_NAME, APP_VERSION))
+
+    command_desc=''
+    for command in sorted(COMMANDS.keys()):
+        command_desc += "  %-*s  %s %s\n" % (max([len(x) for x in COMMANDS.keys()]),
+                                             command,
+                                             COMMANDS[command][0] and '*' or ' ',
+                                             COMMANDS[command][1])
+
+    # Parse args
+    parser = argparse.ArgumentParser(
+                formatter_class=argparse.RawDescriptionHelpFormatter,
+                usage='%(prog)s command [options]',
+                description=_('Run one of the following Terminator DBus commands:\n\n%s') % (command_desc),
+                epilog=_('* These entries require either TERMINATOR_UUID environment var,\n  or the --uuid option must be used.'))
+
+    parser.add_argument('command', type=str, nargs=1, choices=sorted(COMMANDS.keys()),
+                help=argparse.SUPPRESS)
+
+    parser.add_argument('-u', '--uuid', dest='uuid', type=str, metavar='UUID', default=argparse.SUPPRESS,
+                help=_('Terminal UUID for when not in env var TERMINATOR_UUID'))
+
+    parser.add_argument('-p', '--profile', dest='profile', type=str, default=argparse.SUPPRESS,
+                help=_('Profile name to switch to'))
+
+    parser.add_argument('-f', '--file', dest='file', type=str, default=argparse.SUPPRESS,
+                help=_('File to pass to command'))
+
+    parser.add_argument('-x', '--execute', dest='execute', type=str, default=argparse.SUPPRESS,
+                help=_('Command to run in new terminal'))
+
+    parser.add_argument('-t', '--tab-title', dest='tab-title', type=str, default="Missing Tab Title! Use -t argument!",
+                help=_('Tab name to set. Only used with "set_tab_title" command.'))
+
+    parser.add_argument('-T', '--title', dest='title', type=str, default=argparse.SUPPRESS,
+                help=_('Tab name to set.'))
+
+    parser.add_argument('-v', '--version', action='version', version='%%(prog)s %s' %(APP_VERSION))
+
+    options = vars(parser.parse_args())     # Straight to dict
+
+    # Pull out the command
+    command = options['command'][0]
+    del options['command']
+
+    func = getattr(ipc, command)
+    uuid_required = COMMANDS[command][0]
+
+    if uuid_required:
+        uuid = options.get('uuid', os.environ.get('TERMINATOR_UUID'))
+        if uuid:
+            print(str(func(uuid, options)))
+        else:
+            err("$TERMINATOR_UUID is not set, or passed as an option.")
+            sys.exit(1)
+    else:
+        print(str(func(options)))
