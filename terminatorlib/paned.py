@@ -101,7 +101,7 @@ class Paned(Container):
                     'split-vert': self.split_vert,
                     'title-change': self.propagate_title_change,
                     'resize-term': self.resizeterm,
-                    'size-allocate': self.new_size,
+                    'notify::width': self.new_size,
                     'zoom': top_window.zoom,
                     'tab-change': top_window.tab_change,
                     'group-all': top_window.group_all,
@@ -136,7 +136,7 @@ class Paned(Container):
         elif isinstance(widget, Gtk.Paned):
             try:
                 self.connect_child(widget, 'resize-term', self.resizeterm)
-                self.connect_child(widget, 'size-allocate', self.new_size)
+                self.connect_child(widget, 'notify::width', self.new_size)
             except TypeError:
                 err('Paned::add: %s has no signal resize-term' % widget)
 
@@ -444,7 +444,7 @@ class Paned(Container):
         else:
             children[1].rotate_recursive(container, w2, h2, clockwise)
 
-    def new_size(self, widget, allocation):
+    def new_size(self, widget, *args):
         if self.get_root().set_pos_by_ratio:
             self.set_position_by_ratio()
         else:

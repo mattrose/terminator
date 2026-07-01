@@ -6,7 +6,7 @@ import copy
 import os
 import gi
 gi.require_version('Gtk', '4.0')
-gi.require_version('Vte', '2.91')
+gi.require_version('Vte', '3.91')
 from gi.repository import Gtk, Gdk, GLib, Vte
 from gi.repository.GLib import GError
 import itertools

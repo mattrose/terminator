@@ -68,7 +68,7 @@ from typing import Optional, List
 
 import gi
 from gi.repository import Gtk, GLib
-gi.require_version('Vte', '2.91')
+gi.require_version('Vte', '3.91')
 from gi.repository import Vte
 
 from terminatorlib.plugin import MenuItem
