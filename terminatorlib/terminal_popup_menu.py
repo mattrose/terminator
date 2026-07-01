@@ -263,22 +263,31 @@ class TerminalPopupMenu(object):
         except Exception as ex:
             err('TerminalPopupMenu::show: %s' % ex)
 
-        # Create and show the popover
+        # Create and show the popover.
+        # Parent to the terminal Box (not terminal.vte) so that GTK4's action
+        # group lookup isn't confused by VTE's own event handling.
         popover = Gtk.PopoverMenu.new_from_model(menu)
-        popover.set_parent(terminal.vte)
+        popover.set_parent(terminal)
+
+        # Translate click coordinates from VTE-space into terminal-Box-space.
+        try:
+            px, py = terminal.vte.translate_coordinates(terminal, x, y)
+        except (TypeError, AttributeError):
+            px, py = x, y
+
         rect = Gdk.Rectangle()
-        rect.x = int(x)
-        rect.y = int(y)
+        rect.x = int(px)
+        rect.y = int(py)
         rect.width = 1
         rect.height = 1
         popover.set_pointing_to(rect)
         popover.set_has_arrow(False)
 
-        terminal.vte.insert_action_group('popup', actions)
+        terminal.insert_action_group('popup', actions)
 
         def on_closed(p):
             p.unparent()
-            terminal.vte.insert_action_group('popup', None)
+            terminal.insert_action_group('popup', None)
         popover.connect('closed', on_closed)
         popover.popup()
         return True
@@ -287,7 +296,7 @@ class TerminalPopupMenu(object):
         """Open a dialog to choose background and foreground colors"""
         dialog = Gtk.Dialog(title=_('Pick Terminal Colors'),
                             transient_for=terminal.get_root(),
-                            flags=Gtk.DialogFlags.MODAL)
+                            modal=True)
         dialog.add_button(_('Cancel'), Gtk.ResponseType.CANCEL)
         dialog.add_button(_('Apply'), Gtk.ResponseType.OK)
 
@@ -302,13 +311,15 @@ class TerminalPopupMenu(object):
         grid.set_margin_start(12)
         grid.set_margin_end(12)
 
-        bg_label = Gtk.Label(label=_('Background:'), xalign=0)
+        bg_label = Gtk.Label(label=_('Background:'))
+        bg_label.set_halign(Gtk.Align.START)
         bg_btn = Gtk.ColorButton()
         bg_btn.set_use_alpha(True)
         if terminal.bgcolor is not None:
             bg_btn.set_rgba(terminal.bgcolor.copy())
 
-        fg_label = Gtk.Label(label=_('Text:'), xalign=0)
+        fg_label = Gtk.Label(label=_('Text:'))
+        fg_label.set_halign(Gtk.Align.START)
         fg_btn = Gtk.ColorButton()
         if terminal.fgcolor_active is not None:
             fg_initial = terminal.fgcolor_active.copy()
