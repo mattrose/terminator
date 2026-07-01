@@ -4,7 +4,7 @@
 
 import gi
 from gi.repository import Gtk, Gdk
-gi.require_version('Vte', '2.91')  # vte-0.38 (gnome-3.14)
+gi.require_version('Vte', '3.91')  # vte-0.38 (gnome-3.14)
 from gi.repository import Vte
 from gi.repository import GObject
 from gi.repository import GLib

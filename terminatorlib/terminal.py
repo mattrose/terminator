@@ -8,7 +8,7 @@ import signal
 import time
 import gi
 from gi.repository import GLib, GObject, Pango, Gtk, Gdk, GdkPixbuf, cairo
-gi.require_version('Vte', '2.91')  # vte-0.38 (gnome-3.14)
+gi.require_version('Vte', '3.91')  # vte-0.38 (gnome-3.14)
 from gi.repository import Vte
 import subprocess
 try:
@@ -500,8 +500,7 @@ class Terminal(Gtk.Box):
 
         self.cnxids.new(self.vte, 'window-title-changed', lambda x:
             self.emit('title-change', self.get_window_title()))
-        self.cnxids.new(self.vte, 'grab-focus', self.on_vte_focus)
-        self.cnxids.new(self.vte, 'size-allocate', self.deferred_on_vte_size_allocate)
+        self.cnxids.new(self.vte, 'notify::width', self.deferred_on_vte_size_allocate)
 
         self.cnxids.new(self.vte, 'realize', self.reconfigure)
 
@@ -1349,19 +1348,18 @@ class Terminal(Gtk.Box):
         """A child widget is done editing a label, return focus to VTE"""
         self.vte.grab_focus()
 
-    def deferred_on_vte_size_allocate(self, widget, allocation):
-        # widget & allocation are not used in on_vte_size_allocate, so we
-        # can use the on_vte_size_allocate instead of duplicating the code
+    def deferred_on_vte_size_allocate(self, widget, *args):
+        # widget & args are not used in on_vte_size_allocate
         if self.pending_on_vte_size_allocate:
             return
         self.pending_on_vte_size_allocate = True
-        GObject.idle_add(self.do_deferred_on_vte_size_allocate, widget, allocation)
+        GObject.idle_add(self.do_deferred_on_vte_size_allocate)
 
-    def do_deferred_on_vte_size_allocate(self, widget, allocation):
+    def do_deferred_on_vte_size_allocate(self):
         self.pending_on_vte_size_allocate = False
-        self.on_vte_size_allocate(widget, allocation)
+        self.on_vte_size_allocate()
 
-    def on_vte_size_allocate(self, widget, allocation):
+    def on_vte_size_allocate(self):
         self.titlebar.update_terminal_size(self.vte.get_column_count(),
                 self.vte.get_row_count())
         if self.config['geometry_hinting']:
@@ -1393,9 +1391,9 @@ class Terminal(Gtk.Box):
 
         return data
 
-    def zoom_scale(self, widget, allocation, old_data):
+    def zoom_scale(self, widget, _pspec, old_data):
         """Scale our font correctly based on how big we are not vs before"""
-        self.cnxids.remove_signal(self, 'size-allocate')
+        self.cnxids.remove_signal(self, 'notify::width')
         # FIXME: Is a zoom signal actually used anywhere?
         self.cnxids.remove_signal(self, 'zoom')
 

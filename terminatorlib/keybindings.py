@@ -49,15 +49,12 @@ class Keybindings:
         'control':  Gdk.ModifierType.CONTROL_MASK,
         'primary':  Gdk.ModifierType.CONTROL_MASK,
         'shift':    Gdk.ModifierType.SHIFT_MASK,
-        'alt':      Gdk.ModifierType.MOD1_MASK,
+        'alt':      Gdk.ModifierType.ALT_MASK,
         'super':    Gdk.ModifierType.SUPER_MASK,
         'hyper':    Gdk.ModifierType.HYPER_MASK,
-        'mod2':	    Gdk.ModifierType.MOD2_MASK,
-        'mod4':     Gdk.ModifierType.MOD4_MASK
+        'mod2':     Gdk.ModifierType.META_MASK,
+        'mod4':     Gdk.ModifierType.SUPER_MASK,
     }
-
-    if sys.platform == "darwin":
-        modifiers['mod2'] = Gdk.ModifierType.META_MASK
 
     empty = {}
     keys = None
@@ -65,11 +62,7 @@ class Keybindings:
     _lookup = None
 
     def __init__(self):
-        # GTK4: Gdk.Keymap.get_default() removed; use display keymap
-        try:
-            self.keymap = Gdk.Display.get_default().get_keymap()
-        except AttributeError:
-            self.keymap = None
+        self.keymap = None
         self.configure({})
 
     def configure(self, bindings):

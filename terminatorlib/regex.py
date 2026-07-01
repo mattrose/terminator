@@ -3,7 +3,7 @@ Utilities for Regexp in VTE
 """
 
 import gi
-gi.require_version('Vte', '2.91')  # vte-0.38 (gnome-3.14)
+gi.require_version('Vte', '3.91')  # vte-0.38 (gnome-3.14)
 from gi.repository import GLib, Vte
 
 # constants for vte regex matching are documented in the pcre2 api:

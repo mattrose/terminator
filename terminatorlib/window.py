@@ -152,7 +152,7 @@ class Window(Container, Gtk.Window):
 
                 if not self.hidebound:
                     err('Unable to bind hide_window key, another instance/window has it.')
-                    self.hidefunc = self.iconify
+                    self.hidefunc = self.minimize
                 else:
                     self.hidefunc = self.hide
 
@@ -360,7 +360,7 @@ class Window(Container, Gtk.Window):
         """Set the minimised state of the window from the supplied value"""
         if value == True:
             try:
-                self.iconify()
+                self.minimize()
             except Exception:
                 pass
 
@@ -678,7 +678,7 @@ class Window(Container, Gtk.Window):
         self.set_property('term_zoomed', True)
 
         if font_scale:
-            widget.cnxids.new(widget, 'size-allocate',
+            widget.cnxids.new(widget, 'notify::width',
                     widget.zoom_scale, self.zoom_data)
 
         widget.grab_focus()
