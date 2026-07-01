@@ -5,7 +5,7 @@ import sys
 if __name__ == '__main__':
   sys.path.append( os.path.join(os.path.dirname(__file__), "../.."))
 
-from gi.repository import Gtk,Vte
+from gi.repository import Vte
 
 from terminatorlib.config import Config
 import terminatorlib.plugin as plugin
@@ -34,10 +34,7 @@ class SaveUserSessionLayout(plugin.MenuItem):
 
     def callback(self, menuitems, menu, terminal):
         """ Add save menu item to the menu"""
-        vte_terminal = terminal.get_vte()
-        item = Gtk.MenuItem.new_with_mnemonic(_('Save _UserSessionLayout'))
-        item.connect("activate", self.save_all_session_layouts, terminal)
-        menuitems.append(item)
+        menuitems.append((_('Save UserSessionLayout'), self.save_all_session_layouts, terminal))
         
     def save_all_session_layouts(self, menuitem, terminal):
         for term in Terminator().terminals:

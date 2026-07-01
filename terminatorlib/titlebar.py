@@ -14,7 +14,7 @@ from .translation import _
 
 # pylint: disable-msg=R0904
 # pylint: disable-msg=W0613
-class Titlebar(Gtk.EventBox):
+class Titlebar(Gtk.Box):
     """Class implementing the Titlebar widget"""
 
     terminator = None
@@ -29,6 +29,11 @@ class Titlebar(Gtk.EventBox):
     grouplabel = None
     groupentry = None
     bellicon = None
+
+    _self_bg_provider = None
+    _ebox_bg_provider = None
+    _grouplabel_fg_provider = None
+    _grouplabel_font_attrs = None
 
     __gsignals__ = {
             'clicked': (GObject.SignalFlags.RUN_LAST, None, ()),
@@ -47,18 +52,25 @@ class Titlebar(Gtk.EventBox):
 
         self.label = EditableLabel()
         self.label.connect('edit-done', self.on_edit_done)
-        self.ebox = Gtk.EventBox()
-        grouphbox = Gtk.HBox()
+        self.ebox = Gtk.Box()
+        grouphbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         self.grouplabel = Gtk.Label(ellipsize='end')
         self.groupicon = Gtk.Image()
         self.bellicon = Gtk.Image()
-        self.bellicon.set_no_show_all(True)
+        self.bellicon.set_visible(False)
 
         self.groupentry = Gtk.Entry()
-        self.groupentry.set_no_show_all(True)
-        self.groupentry.connect('focus-out-event', self.groupentry_cancel)
+        self.groupentry.set_visible(False)
+
+        focus_ctrl = Gtk.EventControllerFocus()
+        focus_ctrl.connect('leave', lambda c: self.groupentry_cancel())
+        self.groupentry.add_controller(focus_ctrl)
+
+        key_ctrl = Gtk.EventControllerKey()
+        key_ctrl.connect('key-pressed', self._groupentry_key_pressed)
+        self.groupentry.add_controller(key_ctrl)
+
         self.groupentry.connect('activate', self.groupentry_activate)
-        self.groupentry.connect('key-press-event', self.groupentry_keypress)
 
         groupsend_type = self.terminator.groupsend_type
         if self.terminator.groupsend == groupsend_type['all']:
@@ -67,37 +79,66 @@ class Titlebar(Gtk.EventBox):
             icon_name = 'group'
         elif self.terminator.groupsend == groupsend_type['off']:
             icon_name = 'off'
-        self.set_from_icon_name('_active_broadcast_%s' % icon_name, 
-                Gtk.IconSize.MENU)
+        self.set_from_icon_name('_active_broadcast_%s' % icon_name)
 
-        grouphbox.pack_start(self.groupicon, False, True, 2)
-        grouphbox.pack_start(self.grouplabel, False, True, 2)
-        grouphbox.pack_start(self.groupentry, False, True, 2)
+        grouphbox.append(self.groupicon)
+        self.groupicon.set_margin_start(2)
+        self.groupicon.set_margin_end(2)
+        grouphbox.append(self.grouplabel)
+        self.grouplabel.set_margin_start(2)
+        self.grouplabel.set_margin_end(2)
+        grouphbox.append(self.groupentry)
+        self.groupentry.set_margin_start(2)
+        self.groupentry.set_margin_end(2)
 
-        self.ebox.add(grouphbox)
-        self.ebox.show_all()
+        self.ebox.append(grouphbox)
 
-        self.bellicon.set_from_icon_name('terminal-bell', Gtk.IconSize.MENU)
+        self.bellicon.set_from_icon_name('terminal-bell')
 
         viewport = Gtk.Viewport(hscroll_policy='natural')
-        viewport.add(self.label)
+        viewport.set_child(self.label)
+        viewport.set_hexpand(True)
 
-        hbox = Gtk.HBox()
-        hbox.pack_start(self.ebox, False, True, 0)
-        hbox.pack_start(Gtk.VSeparator(), False, True, 0)
-        hbox.pack_start(viewport, True, True, 0)
-        hbox.pack_end(self.bellicon, False, False, 2)
+        hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        hbox.append(self.ebox)
+        hbox.append(Gtk.Separator(orientation=Gtk.Orientation.VERTICAL))
+        hbox.append(viewport)
+        self.bellicon.set_margin_start(2)
+        self.bellicon.set_margin_end(2)
+        hbox.append(self.bellicon)
 
-        self.add(hbox)
-        hbox.show_all()
-        self.set_no_show_all(True)
-        self.show()
+        self.append(hbox)
 
-        self.connect('button-press-event', self.on_clicked)
+        gesture = Gtk.GestureClick()
+        gesture.connect('pressed', self.on_clicked)
+        self.add_controller(gesture)
+
+    def _set_widget_bg(self, widget, color_str, attr):
+        """Apply a background color to a widget via CSS"""
+        provider = getattr(self, attr)
+        if provider is None:
+            provider = Gtk.CssProvider()
+            setattr(self, attr, provider)
+            widget.get_style_context().add_provider(
+                provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+        provider.load_from_data(
+            ("* { background-color: %s; }" % color_str).encode())
+
+    def _set_grouplabel_fg(self, color_str):
+        """Apply a foreground color to grouplabel via CSS"""
+        if self._grouplabel_fg_provider is None:
+            self._grouplabel_fg_provider = Gtk.CssProvider()
+            self.grouplabel.get_style_context().add_provider(
+                self._grouplabel_fg_provider,
+                Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+        self._grouplabel_fg_provider.load_from_data(
+            ("label { color: %s; }" % color_str).encode())
 
     def connect_icon(self, func):
         """Connect the supplied function to clicking on the group icon"""
-        self.ebox.connect('button-press-event', func)
+        gesture = Gtk.GestureClick()
+        gesture.connect('pressed', func)
+        self.ebox.add_controller(gesture)
 
     def update(self, other=None):
         """Update our contents"""
@@ -117,7 +158,9 @@ class Titlebar(Gtk.EventBox):
         else:
             title_font = Pango.FontDescription(self.config.get_system_prop_font())
         self.label.modify_font(title_font)
-        self.grouplabel.modify_font(title_font)
+        attrs = Pango.AttrList()
+        attrs.insert(Pango.attr_font_desc_new(title_font))
+        self.grouplabel.set_attributes(attrs)
 
         if other:
             term = self.terminal
@@ -166,21 +209,16 @@ class Titlebar(Gtk.EventBox):
                 group_fg = self.config['title_transmit_fg_color']
                 group_bg = self.config['title_transmit_bg_color']
 
-            self.label.modify_fg(Gtk.StateType.NORMAL,
-                    Gdk.color_parse(title_fg))
-            self.grouplabel.modify_fg(Gtk.StateType.NORMAL,
-                    Gdk.color_parse(group_fg))
-            self.modify_bg(Gtk.StateType.NORMAL, 
-                    Gdk.color_parse(title_bg))
+            rgba = Gdk.RGBA()
+            rgba.parse(title_fg)
+            self.label.modify_fg(None, rgba)
+            self._set_grouplabel_fg(group_fg)
             if not self.get_desired_visibility():
-                if default_bg == True:
-                    color = term.get_style_context().get_background_color(Gtk.StateType.NORMAL)  # VERIFY FOR GTK3
-                else:
-                    color = Gdk.color_parse(title_bg)
+                title_bg = title_bg if not default_bg else '#000000'
+            self._set_widget_bg(self, title_bg, '_self_bg_provider')
             self.update_visibility()
-            self.ebox.modify_bg(Gtk.StateType.NORMAL,
-                    Gdk.color_parse(group_bg))
-            self.set_from_icon_name(icon, Gtk.IconSize.MENU)
+            self._set_widget_bg(self.ebox, group_bg, '_ebox_bg_provider')
+            self.set_from_icon_name(icon)
 
     def update_visibility(self):
         """Make the titlebar be visible or not"""
@@ -203,13 +241,13 @@ class Titlebar(Gtk.EventBox):
             dbg('configured visibility: %s' % self.config['show_titlebar'])
             return(self.config['show_titlebar'])
 
-    def set_from_icon_name(self, name, size = Gtk.IconSize.MENU):
+    def set_from_icon_name(self, name, size=None):
         """Set an icon for the group label"""
         if not name:
             self.groupicon.hide()
             return
-        
-        self.groupicon.set_from_icon_name(APP_NAME + name, size)
+
+        self.groupicon.set_from_icon_name(APP_NAME + name)
         self.groupicon.show()
 
     def update_terminal_size(self, width, height):
@@ -234,10 +272,10 @@ class Titlebar(Gtk.EventBox):
             self.grouplabel.hide()
         self.update_visibility()
 
-    def on_clicked(self, widget, event):
+    def on_clicked(self, gesture, n_press, x, y):
         """Handle a click on the label"""
-        self.show()
-        self.label.show()
+        self.set_visible(True)
+        self.label.set_visible(True)
         self.emit('clicked')
 
     def on_edit_done(self, widget):
@@ -246,7 +284,7 @@ class Titlebar(Gtk.EventBox):
 
     def editing(self):
         """Determine if we're currently editing a group name or title"""
-        return(self.groupentry.get_property('visible') or self.label.editing())
+        return(self.groupentry.get_visible() or self.label.editing())
 
     def create_group(self):
         """Create a new group"""
@@ -259,7 +297,7 @@ class Titlebar(Gtk.EventBox):
         self.groupentry.grab_focus()
         self.update_visibility()
 
-    def groupentry_cancel(self, widget, event):
+    def groupentry_cancel(self, *args):
         """Hide the group name entry"""
         self.groupentry.set_text('')
         self.groupentry.hide()
@@ -270,8 +308,8 @@ class Titlebar(Gtk.EventBox):
         """Actually cause a group to be created"""
         groupname = self.groupentry.get_text() or None
         dbg('creating group: %s' % groupname)
-        self.groupentry_cancel(None, None)
-        last_focused_term=self.terminator.last_focused_term
+        self.groupentry_cancel()
+        last_focused_term = self.terminator.last_focused_term
         if self.terminal.targets_for_new_group:
             [term.titlebar.emit('create-group', groupname) for term in self.terminal.targets_for_new_group]
             self.terminal.targets_for_new_group = None
@@ -280,11 +318,11 @@ class Titlebar(Gtk.EventBox):
         last_focused_term.grab_focus()
         self.terminator.focus_changed(last_focused_term)
 
-    def groupentry_keypress(self, widget, event):
+    def _groupentry_key_pressed(self, ctrl, keyval, keycode, state):
         """Handle keypresses on the entry widget"""
-        key = Gdk.keyval_name(event.keyval)
+        key = Gdk.keyval_name(keyval)
         if key == 'Escape':
-            self.groupentry_cancel(None, None)
+            self.groupentry_cancel()
 
     def icon_bell(self):
         """A bell signal requires we display our bell icon"""

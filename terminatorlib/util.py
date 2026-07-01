@@ -28,10 +28,10 @@ import gi
 
 
 try:
-    gi.require_version('Gtk','3.0')
+    gi.require_version('Gtk','4.0')
     from gi.repository import Gtk, Gdk
 except ImportError:
-    print('You need Gtk 3.0+ to run Remotinator.')
+    print('You need Gtk 4.0+ to run Remotinator.')
     sys.exit(1)
 
 # set this to true to enable debugging output
@@ -83,11 +83,16 @@ def err(log = ""):
 def gerr(message = None):
     """Display a graphical error. This should only be used for serious
     errors as it will halt execution"""
-
-    dialog = Gtk.MessageDialog(None, Gtk.DialogFlags.MODAL,
-            Gtk.MessageType.ERROR, Gtk.ButtonsType.OK, message)
-    dialog.run()
-    dialog.destroy()
+    from gi.repository import GLib
+    dialog = Gtk.MessageDialog(transient_for=None,
+            modal=True,
+            message_type=Gtk.MessageType.ERROR,
+            buttons=Gtk.ButtonsType.OK,
+            text=message)
+    loop = GLib.MainLoop()
+    dialog.connect('response', lambda d, r: (d.destroy(), loop.quit()))
+    dialog.present()
+    loop.run()
 
 def has_ancestor(widget, wtype):
     """Walk up the family tree of widget to see if any ancestors are of type"""
@@ -173,32 +178,9 @@ def shell_lookup():
     dbg('shell_lookup: Unable to locate a shell')
 
 def widget_pixbuf(widget, maxsize=None):
-    """Generate a pixbuf of a widget"""
-    # FIXME: Can this be changed from using "import cairo" to "from gi.repository import cairo"?
-    window = widget.get_window()
-    width, height = window.get_width(), window.get_height()
-
-    longest = max(width, height)
-
-    if maxsize is not None:
-        factor = float(maxsize) / float(longest)
-
-    if not maxsize or (width * factor) > width or (height * factor) > height:
-        factor = 1
-
-    preview_width, preview_height = int(width * factor), int(height * factor)
-
-    preview_surface = Gdk.Window.create_similar_surface(window,
-        cairo.CONTENT_COLOR, preview_width, preview_height)
-
-    cairo_context = cairo.Context(preview_surface)
-    cairo_context.scale(factor, factor)
-    Gdk.cairo_set_source_window(cairo_context, window, 0, 0)
-    cairo_context.paint()
-
-    scaledpixbuf = Gdk.pixbuf_get_from_surface(preview_surface, 0, 0, preview_width, preview_height)
-    
-    return(scaledpixbuf)
+    """Generate a pixbuf of a widget (GTK4: returns None, drag icons use Paintable)"""
+    # GTK4 removed cairo-based window pixbuf capture; drag icons use Gtk.DragIcon
+    return None
 
 def get_system_config_dir():
     system_config_dir = '/etc/xdg'

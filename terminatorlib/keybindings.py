@@ -28,6 +28,18 @@ from .util import err
 class KeymapError(Exception):
     """Custom exception for errors in keybinding configurations"""
 
+
+class KeyEventProxy:
+    """Bridge GTK4 EventControllerKey events to Keybindings.lookup()"""
+    def __init__(self, keyval, keycode, state):
+        self.keyval = keyval
+        self.hardware_keycode = keycode
+        self.group = 0
+        self.state = Gdk.ModifierType(state)
+
+    def get_state(self):
+        return self.state
+
 MODIFIER = re.compile('<([^<]+)>')
 class Keybindings:
     """Class to handle loading and lookup of Terminator keybindings"""
@@ -53,7 +65,11 @@ class Keybindings:
     _lookup = None
 
     def __init__(self):
-        self.keymap = Gdk.Keymap.get_default()
+        # GTK4: Gdk.Keymap.get_default() removed; use display keymap
+        try:
+            self.keymap = Gdk.Display.get_default().get_keymap()
+        except AttributeError:
+            self.keymap = None
         self.configure({})
 
     def configure(self, bindings):
@@ -120,14 +136,24 @@ class Keybindings:
     def lookup(self, event):
         """Translate a keyboard event into a mapped key"""
         try:
-            _found, keyval, _egp, _lvl, consumed = self.keymap.translate_keyboard_state(
-                                              event.hardware_keycode, 
-                                              Gdk.ModifierType(event.get_state() & ~Gdk.ModifierType.LOCK_MASK),
-                                              event.group)
-        except TypeError:
-            err ("keybindings.lookup failed to translate keyboard event: %s" % 
-                     dir(event))
+            state = event.get_state() if callable(getattr(event, 'get_state', None)) else Gdk.ModifierType(event._state)
+            keyval = event.keyval
+            consumed = 0
+            if self.keymap is not None and hasattr(event, 'hardware_keycode'):
+                try:
+                    result = self.keymap.translate_keyboard_state(
+                        event.hardware_keycode,
+                        Gdk.ModifierType(int(state) & ~int(Gdk.ModifierType.LOCK_MASK)),
+                        getattr(event, 'group', 0))
+                    if result[0]:
+                        keyval = result[1]
+                        consumed = result[4]
+                except (TypeError, AttributeError):
+                    pass
+        except (TypeError, AttributeError):
+            err("keybindings.lookup failed to translate keyboard event: %s" %
+                    dir(event))
             return None
-        mask = (event.get_state() & ~consumed) & self._masks
+        mask = (int(state) & ~int(consumed)) & self._masks
         return self._lookup.get(mask, self.empty).get(keyval, None)
 

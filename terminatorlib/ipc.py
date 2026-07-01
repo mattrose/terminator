@@ -251,14 +251,14 @@ class DBusService(Borg, dbus.service.Object):
     def get_window(self, uuid=None):
         """Return the UUID of the parent window of a given terminal"""
         terminal = self.terminator.find_terminal_by_uuid(uuid)
-        window = terminal.get_toplevel()
+        window = terminal.get_root()
         return window.uuid.urn
 
     @dbus.service.method(BUS_NAME)
     def get_window_title(self, uuid=None):
         """Return the title of a parent window of a given terminal"""
         terminal = self.terminator.find_terminal_by_uuid(uuid)
-        window = terminal.get_toplevel()
+        window = terminal.get_root()
         return window.get_title()
 
     @dbus.service.method(BUS_NAME)
@@ -266,8 +266,8 @@ class DBusService(Borg, dbus.service.Object):
         """Return the UUID of the parent tab of a given terminal"""
         maker = Factory()
         terminal = self.terminator.find_terminal_by_uuid(uuid)
-        window = terminal.get_toplevel()
-        root_widget = window.get_children()[0]
+        window = terminal.get_root()
+        root_widget = window.get_child()
         if maker.isinstance(root_widget, 'Notebook'):
             #return root_widget.uuid.urn
             for tab_child in root_widget.get_children():
@@ -284,8 +284,8 @@ class DBusService(Borg, dbus.service.Object):
         """Return the title of a parent tab of a given terminal"""
         maker = Factory()
         terminal = self.terminator.find_terminal_by_uuid(uuid)
-        window = terminal.get_toplevel()
-        root_widget = window.get_children()[0]
+        window = terminal.get_root()
+        root_widget = window.get_child()
         if maker.isinstance(root_widget, "Notebook"):
             for tab_child in root_widget.get_children():
                 terms = [tab_child]
@@ -301,12 +301,12 @@ class DBusService(Borg, dbus.service.Object):
 
         maker = Factory()
         terminal = self.terminator.find_terminal_by_uuid(uuid)
-        window = terminal.get_toplevel()
+        window = terminal.get_root()
 
         if not window.is_child_notebook():
             return
 
-        notebook = window.get_children()[0]
+        notebook = window.get_child()
         n_page = notebook.get_current_page()
         page = notebook.get_nth_page(n_page)
         label = notebook.get_tab_label(page)
