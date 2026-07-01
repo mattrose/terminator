@@ -1078,7 +1078,7 @@ class Terminal(Gtk.Box):
         groupsend = self.terminator.groupsend
         groupsend_type = self.terminator.groupsend_type
         toplevel = self.vte.get_root()
-        window_focussed = isinstance(toplevel, Gtk.Window) and toplevel.get_property('has-toplevel-focus')
+        window_focussed = isinstance(toplevel, Gtk.Window) and toplevel.get_property('is-active')
         if groupsend != groupsend_type['off'] and window_focussed and self.vte.is_focus():
             if self.group and groupsend == groupsend_type['group']:
                 self.terminator.group_emit(self, self.group, 'key-press-event',

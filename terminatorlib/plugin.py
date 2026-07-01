@@ -310,8 +310,7 @@ class KeyBindUtil:
 
 
     def keyaction(self, event):
-        #FIXME MOD2 mask comes in the event, remove
-        event.state  &= ~Gdk.ModifierType.MOD2_MASK
+        event.state &= ~Gdk.ModifierType.META_MASK
 
         keyval = Gdk.keyval_to_lower(event.keyval)
         ret = (keyval, event.state)
