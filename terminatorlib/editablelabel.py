@@ -52,8 +52,8 @@ class EditableLabel(Gtk.Box):
         self.add_controller(gesture)
 
     def set_angle(self, angle):
-        """set angle of the label"""
-        self._label.set_angle(angle)
+        """set angle of the label (no-op in GTK4, label rotation removed)"""
+        pass
 
     def editing(self):
         """Return if we are currently editing"""

@@ -169,6 +169,8 @@ class Terminal(Gtk.Box):
         self.update_url_matches()
 
         self.terminalbox = self.create_terminalbox()
+        self._context_popover = None
+        self._pending_menu = None
 
         self.titlebar = Titlebar(self)
         self.titlebar.connect_icon(self.on_group_button_press)
@@ -459,10 +461,13 @@ class Terminal(Gtk.Box):
         self.vte.add_controller(key_ctrl)
         self._vte_key_ctrl = key_ctrl
 
-        # Button/click events on VTE
+        # Button/click events on VTE — CAPTURE phase so we run before VTE's
+        # own internal GestureClick handlers and can reliably claim the sequence.
         click_ctrl = Gtk.GestureClick()
         click_ctrl.set_button(0)  # all buttons
+        click_ctrl.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
         click_ctrl.connect('pressed', self.on_buttonpress)
+        click_ctrl.connect('released', self.on_buttonrelease)
         self.vte.add_controller(click_ctrl)
         self._vte_click_ctrl = click_ctrl
 
@@ -1096,20 +1101,13 @@ class Terminal(Gtk.Box):
         self.vte.grab_focus()
 
     def on_buttonpress(self, gesture, n_press, x, y):
-        """Handler for mouse events"""
+        """Handler for mouse button press events"""
         widget = gesture.get_widget()
         widget.grab_focus()
 
         button = gesture.get_current_button()
         event = gesture.get_last_event(gesture.get_last_updated_sequence())
         state = event.get_modifier_state() if event else Gdk.ModifierType(0)
-
-        if self.config['putty_paste_style']:
-            middle_click = [self.popup_menu, (widget, x, y)]
-            right_click = [self.paste_clipboard, (not self.config['putty_paste_style_source_clipboard'], True)]
-        else:
-            middle_click = [self.paste_clipboard, (not self.config['putty_paste_style_source_clipboard'], True)]
-            right_click = [self.popup_menu, (widget, x, y)]
 
         if button == self.MOUSEBUTTON_LEFT:
             if self.config["link_single_click"] or state & Gdk.ModifierType.CONTROL_MASK:
@@ -1120,21 +1118,31 @@ class Terminal(Gtk.Box):
                     self.open_url(url, prepare=True)
         elif button == self.MOUSEBUTTON_MIDDLE:
             if not (state & Gdk.ModifierType.CONTROL_MASK):
-                if not (state & Gdk.ModifierType.SHIFT_MASK):
-                    middle_click[0](*middle_click[1])
+                paste_primary = not self.config['putty_paste_style_source_clipboard']
+                if self.config['putty_paste_style']:
+                    self.popup_menu(widget, x, y)
                 else:
-                    middle_click[0](*middle_click[1])
+                    self.paste_clipboard(paste_primary, True)
                 gesture.set_state(Gtk.EventSequenceState.CLAIMED)
                 return True
         elif button == self.MOUSEBUTTON_RIGHT:
             if not (state & Gdk.ModifierType.CONTROL_MASK):
-                if not (state & Gdk.ModifierType.SHIFT_MASK):
-                    right_click[0](*right_click[1])
+                if self.config['putty_paste_style']:
+                    paste_primary = not self.config['putty_paste_style_source_clipboard']
+                    self.paste_clipboard(paste_primary, True)
                 else:
-                    right_click[0](*right_click[1])
-                gesture.set_state(Gtk.EventSequenceState.CLAIMED)
-                return True
+                    self._pending_menu = (x, y)
+            gesture.set_state(Gtk.EventSequenceState.CLAIMED)
+            return True
         return False
+
+    def on_buttonrelease(self, gesture, n_press, x, y):
+        """Show the deferred context menu on right-button release."""
+        if gesture.get_current_button() == self.MOUSEBUTTON_RIGHT:
+            coords = self._pending_menu
+            if coords is not None:
+                self._pending_menu = None
+                self.popup_menu(gesture.get_widget(), coords[0], coords[1])
 
     def on_mousewheel(self, ctrl, dx, dy):
         """Handler for modifier + mouse wheel scroll events"""
@@ -1171,11 +1179,13 @@ class Terminal(Gtk.Box):
         return False
 
     def popup_menu(self, widget, x=0, y=0):
-        """Display the context menu"""
-        window = self.get_root()
-        window.preventHide = True
+        """Display the context menu as a Popover attached to the VTE widget."""
+        existing = self._context_popover
+        if existing is not None:
+            self._context_popover = None
+            existing.popdown()
         menu = TerminalPopupMenu(self)
-        menu.show(widget, x, y)
+        self._context_popover = menu.show(self.vte, x, y)
 
     def do_readonly_toggle(self):
         self.vte.props.input_enabled = not self.vte.props.input_enabled

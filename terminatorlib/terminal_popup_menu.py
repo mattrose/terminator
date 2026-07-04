@@ -3,9 +3,8 @@
 """terminal_popup_menu.py - classes necessary to provide a terminal context
 menu"""
 
-from gi.repository import Gtk, Gdk, Gio, GLib
+from gi.repository import GLib, Gtk, Gdk, Gio
 
-from .version import APP_NAME
 from .translation import _
 from .terminator import Terminator
 from .util import err, dbg, spawn_new_terminator
@@ -20,17 +19,21 @@ class TerminalPopupMenu(object):
     config = None
 
     def __init__(self, terminal):
-        """Class initialiser"""
         self.terminal = terminal
         self.terminator = Terminator()
         self.config = Config()
 
-    def show(self, widget, x=0, y=0):
-        """Display the context menu"""
+    def show(self, parent_widget, x=0, y=0):
+        """Build and show a Gtk.PopoverMenu from Gio.Menu.
+
+        On macOS with GTK 4.14+, PopoverMenu from Gio.Menu is routed through
+        native NSMenu rather than a GdkPopup/NSPanel, so it is immune to the
+        macOS auto-dismiss problem and can extend outside the window boundary.
+        """
         terminal = self.terminal
         self.config.set_profile(terminal.get_profile())
 
-        # Check for URL at click position using cell coordinates
+        # URL detection
         url = None
         char_width = terminal.vte.get_char_width()
         char_height = terminal.vte.get_char_height()
@@ -38,26 +41,29 @@ class TerminalPopupMenu(object):
             url = terminal.vte.match_check(int(x / char_width), int(y / char_height))
 
         menu = Gio.Menu()
-        actions = Gio.SimpleActionGroup()
+        ag = Gio.SimpleActionGroup()
+        _ctr = [0]
 
-        def add_action(name, callback, param_type=None):
-            action = Gio.SimpleAction.new(name, param_type)
-            action.connect('activate', callback)
-            actions.add_action(action)
-            return action
+        def action(name, callback, enabled=True):
+            a = Gio.SimpleAction(name=name)
+            a.connect('activate', lambda _a, _p: callback())
+            a.set_enabled(enabled)
+            ag.add_action(a)
 
-        # URL section
+        def unique(prefix):
+            _ctr[0] += 1
+            return f'{prefix}-{_ctr[0]}'
+
+        # ── URL section ────────────────────────────────────────────────────
         if url and url[0]:
-            dbg("URL matches id: %d" % url[1])
-            nameopen = _('_Open link')
-            namecopy = _('_Copy address')
-
+            nameopen = _('Open link')
+            namecopy = _('Copy address')
             if url[1] == terminal.matches.get('email'):
-                nameopen = _('_Send email to...')
-                namecopy = _('_Copy email address')
+                nameopen = _('Send email to...')
+                namecopy = _('Copy email address')
             elif url[1] == terminal.matches.get('voip'):
-                nameopen = _('Ca_ll VoIP address')
-                namecopy = _('_Copy VoIP address')
+                nameopen = _('Call VoIP address')
+                namecopy = _('Copy VoIP address')
             else:
                 registry = plugin.PluginRegistry()
                 registry.load_plugins()
@@ -66,88 +72,80 @@ class TerminalPopupMenu(object):
                         nameopen = _(urlplugin.nameopen)
                         namecopy = _(urlplugin.namecopy)
                         break
+            sec = Gio.Menu()
+            action('open-url', lambda: terminal.open_url(url, True))
+            sec.append(nameopen, 'menu.open-url')
+            action('copy-url', lambda: terminal.clipboard.set(terminal.prepare_url(url)))
+            sec.append(namecopy, 'menu.copy-url')
+            menu.append_section(None, sec)
 
-            add_action('open-url', lambda a, p: terminal.open_url(url, True))
-            add_action('copy-url', lambda a, p: terminal.clipboard.set(terminal.prepare_url(url)))
-            url_section = Gio.Menu()
-            url_section.append(nameopen, 'popup.open-url')
-            url_section.append(namecopy, 'popup.copy-url')
-            menu.append_section(None, url_section)
+        # ── Edit section ───────────────────────────────────────────────────
+        sec = Gio.Menu()
+        action('copy', lambda: terminal.vte.copy_clipboard(),
+               enabled=terminal.vte.get_has_selection())
+        sec.append(_('Copy'), 'menu.copy')
+        action('paste', lambda: terminal.paste_clipboard())
+        sec.append(_('Paste'), 'menu.paste')
+        action('set-title', lambda: terminal.key_edit_window_title())
+        sec.append(_('Set Window Title'), 'menu.set-title')
+        menu.append_section(None, sec)
 
-        # Edit section
-        copy_action = add_action('copy', lambda a, p: terminal.vte.copy_clipboard())
-        copy_action.set_enabled(terminal.vte.get_has_selection())
-        add_action('paste', lambda a, p: terminal.paste_clipboard())
-        add_action('edit-window-title', lambda a, p: terminal.key_edit_window_title())
-        edit_section = Gio.Menu()
-        edit_section.append(_('_Copy'), 'popup.copy')
-        edit_section.append(_('_Paste'), 'popup.paste')
-        edit_section.append(_('Set _Window Title'), 'popup.edit-window-title')
-        menu.append_section(None, edit_section)
-
-        # Split/tab section (only if not zoomed)
+        # ── Split / tab section (not shown when zoomed) ────────────────────
         if not terminal.is_zoomed():
-            split_section = Gio.Menu()
-            add_action('split-auto', lambda a, p: terminal.emit('split-auto', terminal.get_cwd()))
-            add_action('split-horiz', lambda a, p: terminal.emit('split-horiz', terminal.get_cwd()))
-            add_action('split-vert', lambda a, p: terminal.emit('split-vert', terminal.get_cwd()))
-            add_action('new-tab', lambda a, p: terminal.emit('tab-new', False, terminal))
-            split_section.append(_('Split _Auto'), 'popup.split-auto')
-            split_section.append(_('Split H_orizontally'), 'popup.split-horiz')
-            split_section.append(_('Split V_ertically'), 'popup.split-vert')
-            split_section.append(_('Open _Tab'), 'popup.new-tab')
+            sec = Gio.Menu()
+            action('split-auto', lambda: terminal.emit('split-auto', terminal.get_cwd()))
+            sec.append(_('Split Auto'), 'menu.split-auto')
+            action('split-horiz', lambda: terminal.emit('split-horiz', terminal.get_cwd()))
+            sec.append(_('Split Horizontally'), 'menu.split-horiz')
+            action('split-vert', lambda: terminal.emit('split-vert', terminal.get_cwd()))
+            sec.append(_('Split Vertically'), 'menu.split-vert')
+            action('open-tab', lambda: terminal.emit('tab-new', False, terminal))
+            sec.append(_('Open Tab'), 'menu.open-tab')
             if self.terminator.debug_address is not None:
-                add_action('debug-tab', lambda a, p: terminal.emit('tab-new', True, terminal))
-                split_section.append(_('Open _Debug Tab'), 'popup.debug-tab')
-            menu.append_section(None, split_section)
+                action('open-debug-tab', lambda: terminal.emit('tab-new', True, terminal))
+                sec.append(_('Open Debug Tab'), 'menu.open-debug-tab')
+            menu.append_section(None, sec)
 
-        # Close section
-        close_section = Gio.Menu()
-        add_action('close', lambda a, p: terminal.close())
-        close_section.append(_('_Close'), 'popup.close')
-        menu.append_section(None, close_section)
+        # ── Close ──────────────────────────────────────────────────────────
+        sec = Gio.Menu()
+        action('close', lambda: terminal.close())
+        sec.append(_('Close'), 'menu.close')
+        menu.append_section(None, sec)
 
-        # Zoom section
-        zoom_section = Gio.Menu()
+        # ── Zoom ───────────────────────────────────────────────────────────
+        sec = Gio.Menu()
         if not terminal.is_zoomed():
             sensitive = terminal.get_root() != terminal.get_parent()
-            zoom_action = add_action('zoom', lambda a, p: terminal.zoom())
-            zoom_action.set_enabled(sensitive)
-            max_action = add_action('maximise', lambda a, p: terminal.maximise())
-            max_action.set_enabled(sensitive)
-            zoom_section.append(_('_Zoom terminal'), 'popup.zoom')
-            zoom_section.append(_('Ma_ximize terminal'), 'popup.maximise')
+            action('zoom', lambda: terminal.zoom(), enabled=sensitive)
+            sec.append(_('Zoom terminal'), 'menu.zoom')
+            action('maximise', lambda: terminal.maximise(), enabled=sensitive)
+            sec.append(_('Maximise terminal'), 'menu.maximise')
         else:
-            add_action('unzoom', lambda a, p: terminal.unzoom())
-            zoom_section.append(_('_Restore all terminals'), 'popup.unzoom')
-        menu.append_section(None, zoom_section)
+            action('unzoom', lambda: terminal.unzoom())
+            sec.append(_('Restore all terminals'), 'menu.unzoom')
+        menu.append_section(None, sec)
 
-        # Grouping section (if titlebar hidden)
-        if self.config['show_titlebar'] == False:
-            group_menu = terminal.populate_group_menu()
-            group_section = Gio.Menu()
-            group_item = Gio.MenuItem.new_submenu(_('Grouping'), group_menu)
-            group_section.append_item(group_item)
-            menu.append_section(None, group_section)
-
-        # Relaunch section (if held open)
+        # ── Relaunch (only when process is held open) ──────────────────────
         if terminal.is_held_open:
-            add_action('relaunch', lambda a, p: terminal.spawn_child())
-            relaunch_section = Gio.Menu()
-            relaunch_section.append(_('Relaunch Command'), 'popup.relaunch')
-            menu.append_section(None, relaunch_section)
+            sec = Gio.Menu()
+            action('relaunch', lambda: terminal.spawn_child())
+            sec.append(_('Relaunch Command'), 'menu.relaunch')
+            menu.append_section(None, sec)
 
-        # Options section
-        opts_section = Gio.Menu()
-        add_action('toggle-readonly', lambda a, p: terminal.do_readonly_toggle())
-        add_action('toggle-scrollbar', lambda a, p: terminal.do_scrollbar_toggle())
-        add_action('preferences', lambda a, p: PrefsEditor(terminal))
-        opts_section.append(_('_Read only'), 'popup.toggle-readonly')
-        opts_section.append(_('Show _scrollbar'), 'popup.toggle-scrollbar')
-        opts_section.append(_('_Preferences'), 'popup.preferences')
-        menu.append_section(None, opts_section)
+        # ── Options ────────────────────────────────────────────────────────
+        sec = Gio.Menu()
+        action('readonly', lambda: terminal.do_readonly_toggle())
+        sec.append(_('Read only'), 'menu.readonly')
+        action('scrollbar', lambda: terminal.do_scrollbar_toggle())
+        sec.append(_('Show scrollbar'), 'menu.scrollbar')
+        def _open_prefs():
+            PrefsEditor(terminal)
+            return GLib.SOURCE_REMOVE
+        action('preferences', lambda: GLib.idle_add(_open_prefs))
+        sec.append(_('Preferences'), 'menu.preferences')
+        menu.append_section(None, sec)
 
-        # Colors submenu
+        # ── Colors submenu ─────────────────────────────────────────────────
         theme_items = [
             ('Solarized Light', '#eee8d5', '#586e75'),
             ('Solarized Dark', '#002b36', '#839496'),
@@ -164,136 +162,103 @@ class TerminalPopupMenu(object):
             ('Solarized Blue', '#073642', '#93a1a1'),
         ]
         colors_menu = Gio.Menu()
-        for i, (theme_label, bg, fg) in enumerate(theme_items):
-            aname = 'theme-%d' % i
-            add_action(aname, lambda a, p, b=bg, f=fg: (terminal.set_bgcolor(b), terminal.set_fgcolor(f)))
-            colors_menu.append(theme_label, 'popup.' + aname)
-        colors_menu.append(_('_Custom...'), 'popup.custom-colors')
-        add_action('custom-colors', lambda a, p: self.pick_custom_colors(terminal))
-        colors_item = Gio.MenuItem.new_submenu(_('_Colors'), colors_menu)
-        colors_section = Gio.Menu()
-        colors_section.append_item(colors_item)
-        menu.append_section(None, colors_section)
+        for theme_label, bg, fg in theme_items:
+            aname = unique('color')
+            b, f = bg, fg
+            action(aname, lambda b=b, f=f: (terminal.set_bgcolor(b), terminal.set_fgcolor(f)))
+            colors_menu.append(theme_label, f'menu.{aname}')
+        action('pick-colors', lambda: self.pick_custom_colors(terminal))
+        colors_menu.append(_('Custom...'), 'menu.pick-colors')
+        sec = Gio.Menu()
+        sec.append_submenu(_('Colors'), colors_menu)
+        menu.append_section(None, sec)
 
-        # Profiles submenu (if more than one profile)
+        # ── Profiles submenu ───────────────────────────────────────────────
         profilelist = sorted(self.config.list_profiles(), key=str.lower)
         if len(profilelist) > 1:
             profiles_menu = Gio.Menu()
-            current_profile = terminal.get_profile()
-            for j, profile in enumerate(profilelist):
-                profile_label = profile.capitalize() if profile == 'default' else profile
-                aname = 'profile-%d' % j
-                add_action(aname, lambda a, p, prof=profile: terminal.force_set_profile(None, prof))
-                profiles_menu.append(profile_label, 'popup.' + aname)
-            profiles_item = Gio.MenuItem.new_submenu(_('Profiles'), profiles_menu)
-            profiles_section = Gio.Menu()
-            profiles_section.append_item(profiles_item)
-            menu.append_section(None, profiles_section)
+            for profile in profilelist:
+                lbl = profile.capitalize() if profile == 'default' else profile
+                aname = unique('profile')
+                p = profile
+                action(aname, lambda p=p: terminal.force_set_profile(None, p))
+                profiles_menu.append(lbl, f'menu.{aname}')
+            sec = Gio.Menu()
+            sec.append_submenu(_('Profiles'), profiles_menu)
+            menu.append_section(None, sec)
 
-        # Layouts submenu
+        # ── Layouts submenu ────────────────────────────────────────────────
         layouts = self.config.list_layouts()
         if layouts:
             layouts_menu = Gio.Menu()
-            for k, layout in enumerate(layouts):
-                aname = 'layout-%d' % k
-                add_action(aname, lambda a, p, lay=layout: spawn_new_terminator(self.terminator.origcwd, ['-u', '-l', lay]))
-                layouts_menu.append(layout, 'popup.' + aname)
-            layouts_item = Gio.MenuItem.new_submenu(_('_Layouts...'), layouts_menu)
-            layouts_section = Gio.Menu()
-            layouts_section.append_item(layouts_item)
-            menu.append_section(None, layouts_section)
+            for layout in layouts:
+                aname = unique('layout')
+                l = layout
+                action(aname, lambda l=l: spawn_new_terminator(
+                    self.terminator.origcwd, ['-u', '-l', l]))
+                layouts_menu.append(layout, f'menu.{aname}')
+            sec = Gio.Menu()
+            sec.append_submenu(_('Layouts...'), layouts_menu)
+            menu.append_section(None, sec)
 
-        # Plugin menu items — plugins append (label, callback, *args) tuples,
-        # or ('check', label, is_active, callback) for toggle items,
-        # or (label, [(sublabel, callback, *args), ...]) for submenus.
+        # ── Plugin items ───────────────────────────────────────────────────
         try:
             menuitems = []
             registry = plugin.PluginRegistry()
             registry.load_plugins()
-            plugins = registry.get_plugins_by_capability('terminal_menu')
-            for menuplugin in plugins:
-                menuplugin.callback(menuitems, menu, terminal)
+            for menuplugin in registry.get_plugins_by_capability('terminal_menu'):
+                menuplugin.callback(menuitems, None, terminal)
             if menuitems:
-                plugin_section = Gio.Menu()
-                plugin_counter = [0]
-
-                def _process_plugin_items(items, section):
-                    for item in items:
-                        if item is None:
-                            continue
-                        if not isinstance(item, tuple) or len(item) < 2:
-                            continue
-                        first = item[0]
-                        second = item[1]
-                        if first == 'check':
-                            # ('check', label, is_active, callback)
-                            label, is_active, cb = item[1], item[2], item[3]
-                            n = 'plugin-check-%d' % plugin_counter[0]
-                            plugin_counter[0] += 1
-                            state = GLib.Variant('b', bool(is_active))
-                            action = Gio.SimpleAction.new_stateful(n, None, state)
-                            def _on_check(a, v, f=cb):
-                                a.set_state(v)
-                                f(None, v.get_boolean())
-                            action.connect('change-state', _on_check)
-                            actions.add_action(action)
-                            section.append(label, 'popup.' + n)
-                        elif isinstance(second, list):
-                            # (label, [(sublabel, callback, *args), ...])
-                            sub_menu = Gio.Menu()
-                            _process_plugin_items(second, sub_menu)
-                            section.append_item(Gio.MenuItem.new_submenu(first, sub_menu))
-                        elif first is None:
-                            pass  # separator placeholder — ignored
-                        else:
-                            # (label, callback, *args)
-                            extra = item[2:] if len(item) > 2 else ()
-                            n = 'plugin-%d' % plugin_counter[0]
-                            plugin_counter[0] += 1
-                            action = Gio.SimpleAction.new(n, None)
-                            def _on_act(a, p, f=second, fa=extra):
-                                f(None, *fa)
-                            action.connect('activate', _on_act)
-                            actions.add_action(action)
-                            section.append(first, 'popup.' + n)
-
-                _process_plugin_items(menuitems, plugin_section)
-                if plugin_section.get_n_items() > 0:
-                    menu.append_section(None, plugin_section)
+                sec = Gio.Menu()
+                self._add_plugin_items_to_menu(sec, menuitems, action, unique)
+                menu.append_section(None, sec)
         except Exception as ex:
             err('TerminalPopupMenu::show: %s' % ex)
 
-        # Create and show the popover.
-        # Parent to the terminal Box (not terminal.vte) so that GTK4's action
-        # group lookup isn't confused by VTE's own event handling.
-        popover = Gtk.PopoverMenu.new_from_model(menu)
-        popover.set_parent(terminal)
-
-        # Translate click coordinates from VTE-space into terminal-Box-space.
-        try:
-            px, py = terminal.vte.translate_coordinates(terminal, x, y)
-        except (TypeError, AttributeError):
-            px, py = x, y
+        # ── Build and show ─────────────────────────────────────────────────
+        # Use sliding (not nested) so submenus open as separate panels instead
+        # of expanding inline, which would make the menu taller than the screen.
+        popover = Gtk.PopoverMenu.new_from_model_full(menu, Gtk.PopoverMenuFlags(0))
+        popover.set_parent(parent_widget)
+        popover.set_has_arrow(False)
+        popover.insert_action_group('menu', ag)
 
         rect = Gdk.Rectangle()
-        rect.x = int(px)
-        rect.y = int(py)
+        rect.x = int(x)
+        rect.y = int(y)
         rect.width = 1
         rect.height = 1
         popover.set_pointing_to(rect)
-        popover.set_has_arrow(False)
 
-        terminal.insert_action_group('popup', actions)
-
-        def on_closed(p):
-            p.unparent()
-            terminal.insert_action_group('popup', None)
-        popover.connect('closed', on_closed)
         popover.popup()
-        return True
+        return popover
+
+    def _add_plugin_items_to_menu(self, gmenu, items, action_fn, unique_fn):
+        """Recursively convert plugin menu items into Gio.Menu entries."""
+        for item in items:
+            if item is None:
+                continue
+            if not isinstance(item, tuple) or len(item) < 2:
+                continue
+            first, second = item[0], item[1]
+            if first == 'check':
+                label, is_active, cb = item[1], item[2], item[3]
+                aname = unique_fn('plugin')
+                prefix = '✓ ' if is_active else '   '
+                action_fn(aname, lambda f=cb, a=is_active: f(None, not a))
+                gmenu.append(prefix + label, f'menu.{aname}')
+            elif isinstance(second, list):
+                sub = Gio.Menu()
+                self._add_plugin_items_to_menu(sub, second, action_fn, unique_fn)
+                gmenu.append_submenu(first, sub)
+            else:
+                extra = item[2:] if len(item) > 2 else ()
+                aname = unique_fn('plugin')
+                action_fn(aname, lambda f=second, fa=extra: f(None, *fa))
+                gmenu.append(first, f'menu.{aname}')
 
     def pick_custom_colors(self, terminal):
-        """Open a dialog to choose background and foreground colors"""
+        """Open a dialog to choose background and foreground colors."""
         dialog = Gtk.Dialog(title=_('Pick Terminal Colors'),
                             transient_for=terminal.get_root(),
                             modal=True)
@@ -334,6 +299,7 @@ class TerminalPopupMenu(object):
 
         result = [Gtk.ResponseType.CANCEL]
         loop = GLib.MainLoop()
+
         def on_response(d, r):
             result[0] = r
             d.destroy()
@@ -345,13 +311,9 @@ class TerminalPopupMenu(object):
         if result[0] == Gtk.ResponseType.OK:
             bg_rgba = bg_btn.get_rgba()
             fg_rgba = fg_btn.get_rgba()
-            bg_hex = "#{0:02x}{1:02x}{2:02x}".format(
-                int(bg_rgba.red * 255),
-                int(bg_rgba.green * 255),
-                int(bg_rgba.blue * 255))
-            fg_hex = "#{0:02x}{1:02x}{2:02x}".format(
-                int(fg_rgba.red * 255),
-                int(fg_rgba.green * 255),
-                int(fg_rgba.blue * 255))
+            bg_hex = '#{:02x}{:02x}{:02x}'.format(
+                int(bg_rgba.red * 255), int(bg_rgba.green * 255), int(bg_rgba.blue * 255))
+            fg_hex = '#{:02x}{:02x}{:02x}'.format(
+                int(fg_rgba.red * 255), int(fg_rgba.green * 255), int(fg_rgba.blue * 255))
             terminal.set_bgcolor(bg_hex, alpha=bg_rgba.alpha)
             terminal.set_fgcolor(fg_hex)

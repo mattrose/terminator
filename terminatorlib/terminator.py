@@ -456,9 +456,17 @@ class Terminator(Borg):
             css += """
                 .terminator-terminal-window separator {
                     min-height: %spx;
-                    min-width: %spx; 
+                    min-width: %spx;
                 }
                 """ % (self.config['handle_size'],self.config['handle_size'])
+        # Compact the right-click context menu so all items fit without scrolling.
+        css += """
+            popover.menu modelbutton {
+                min-height: 20px;
+                padding-top: 2px;
+                padding-bottom: 2px;
+            }
+            """
         style_provider = Gtk.CssProvider()
         style_provider.load_from_data(css.encode('utf-8'))
         self.style_providers.append(style_provider)
