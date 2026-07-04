@@ -235,8 +235,7 @@ class Window(Container, Gtk.Window):
             if mapping == 'full_screen':
                 self.set_fullscreen(not self.isfullscreen)
             elif mapping == 'close_window':
-                if not self.on_delete_event(self):
-                    self.on_destroy_event(self)
+                self.on_delete_event(self)
             else:
                 return False
             return True
@@ -290,29 +289,41 @@ class Window(Container, Gtk.Window):
         return self.get_child().newtab(debugtab, cwd=cwd, profile=profile)
 
     def on_delete_event(self, window, data=None):
-        """Handle a window close request"""
-        maker = Factory()
+        """Handle a window close request (GTK4 close-request signal).
 
-        child = self.get_child()
-        if (maker.isinstance(child, 'Terminal') or
-            maker.isinstance(child, 'Container')):
-            confirm_close = self.construct_confirm_close(window, child)
-            return (confirm_close != Gtk.ResponseType.ACCEPT)
-        else:
-            dbg('unknown child: %s' % child)
+        In GTK4 the default handler calls gtk_window_destroy() when we return
+        False, but that does NOT reliably emit the 'destroy' signal via the
+        normal Python/GObject path.  So we do all cleanup here, before
+        returning False, rather than relying on on_destroy_event being called.
+        """
+        if self.isDestroyed:
             return False
 
-    def on_destroy_event(self, widget, data=None):
-        """Handle window destruction"""
-        dbg('destroying self')
+        maker = Factory()
+        child = self.get_child()
+        if (maker.isinstance(child, 'Terminal') or
+                maker.isinstance(child, 'Container')):
+            confirm_close = self.construct_confirm_close(window, child)
+            if confirm_close != Gtk.ResponseType.ACCEPT:
+                return True   # user cancelled — keep window open
+        # User confirmed (or no prompt needed): clean up and allow close.
+        self._close_cleanup()
+        return False
+
+    def _close_cleanup(self):
+        """Tear down terminals, deregister, and quit the main loop."""
+        if self.isDestroyed:
+            return
+        self.isDestroyed = True
         for terminal in self.get_terminals():
             terminal.emit('pre-close-term')
             terminal.close()
         self.cnxids.remove_all()
         self.terminator.deregister_window(self)
-        self.isDestroyed = True
-        self.destroy()
-        del(self)
+
+    def on_destroy_event(self, widget, data=None):
+        """Handle window destruction (fallback — may not fire in GTK4)."""
+        self._close_cleanup()
 
     def on_hide_window(self, data=None):
         """Handle a request to hide/show the window"""
