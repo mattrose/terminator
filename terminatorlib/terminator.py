@@ -5,8 +5,9 @@
 import copy
 import os
 import gi
-gi.require_version('Vte', '2.91')
-from gi.repository import Gtk, Gdk, Vte
+gi.require_version('Gtk', '4.0')
+gi.require_version('Vte', '3.91')
+from gi.repository import Gtk, Gdk, GLib, Vte
 from gi.repository.GLib import GError
 import itertools
 import random
@@ -25,19 +26,9 @@ except ImportError:
     dbg("could not import X11 gir module")
 
 
-def eventkey2gdkevent(eventkey):  # FIXME FOR GTK3: is there a simpler way of casting from specific EventKey to generic (union) GdkEvent?
-    gdkevent = Gdk.Event.new(eventkey.type)
-    gdkevent.key.window = eventkey.window
-    gdkevent.key.send_event = eventkey.send_event
-    gdkevent.key.time = eventkey.time
-    gdkevent.key.state = eventkey.state
-    gdkevent.key.keyval = eventkey.keyval
-    gdkevent.key.length = eventkey.length
-    gdkevent.key.string = eventkey.string
-    gdkevent.key.hardware_keycode = eventkey.hardware_keycode
-    gdkevent.key.group = eventkey.group
-    gdkevent.key.is_modifier = eventkey.is_modifier
-    return gdkevent
+def eventkey2gdkevent(eventkey):
+    """GTK4: no longer used for event broadcasting; return proxy for compat"""
+    return eventkey
 
 class Terminator(Borg):
     """master object for the application"""
@@ -138,7 +129,10 @@ class Terminator(Borg):
         if len(self.windows) == 0:
             # We have no windows left, we should exit
             dbg('no windows remain, quitting')
-            Gtk.main_quit()
+            if hasattr(self, 'main_loop') and self.main_loop:
+                self.main_loop.quit()
+            else:
+                GLib.MainLoop().quit()
 
     def register_launcher_window(self, window):
         """Register a new launcher window widget"""
@@ -157,7 +151,10 @@ class Terminator(Borg):
         if len(self.launcher_windows) == 0 and len(self.windows) == 0:
             # We have no windows left, we should exit
             dbg('no windows remain, quitting')
-            Gtk.main_quit()
+            if hasattr(self, 'main_loop') and self.main_loop:
+                self.main_loop.quit()
+            else:
+                GLib.MainLoop().quit()
 
     def register_terminal(self, terminal):
         """Register a new terminal widget"""
@@ -281,15 +278,13 @@ class Terminator(Borg):
             dbg('Creating a window')
             window, terminal = self.new_window()
             if 'position' in layout[windef]:
-                parts = layout[windef]['position'].split(':')
-                if len(parts) == 2:
-                    window.move(int(parts[0]), int(parts[1]))
+                pass  # GTK4: window positioning removed (no get_position/move)
             if 'size' in layout[windef]:
                 parts = layout[windef]['size']
                 winx = int(parts[0])
                 winy = int(parts[1])
                 if winx > 1 and winy > 1:
-                    window.resize(winx, winy)
+                    window.set_default_size(winx, winy)
             if 'title' in layout[windef]:
                 window.title.force_title(layout[windef]['title'])
             if 'maximised' in layout[windef]:
@@ -317,7 +312,7 @@ class Terminator(Borg):
         window_last_active_term_mapping = {}
         for window in self.windows:
             if window.is_child_notebook():
-                source = window.get_toplevel().get_children()[0]
+                source = window.get_root().get_child()
             else:
                 source = window
             window_last_active_term_mapping[window] = copy.copy(source.last_active_term)
@@ -343,19 +338,13 @@ class Terminator(Borg):
 
         # Make sure all new windows get bumped to the top
         for window in new_win_list:
-            window.show()
-            window.grab_focus()
-            try:
-                t = GdkX11.x11_get_server_time(window.get_window())
-            except (NameError,TypeError, AttributeError):
-                t = 0
-            window.get_window().focus(t)
+            window.present()
 
-        # Going by the docs, this should be all that's needed to ensure that the
-        # last_active_window is focussed. 
+        # Ensure that the last_active_window is focused.
         if self.last_active_window:
             window = self.find_window_by_uuid(self.last_active_window.urn)
-            window.present_with_time(t)
+            if window:
+                window.present()
         self.prelayout_windows = None
 
     def on_gtk_theme_name_notify(self, settings, prop):
@@ -370,8 +359,8 @@ class Terminator(Borg):
 
         if self.style_providers != []:
             for style_provider in self.style_providers:
-                Gtk.StyleContext.remove_provider_for_screen(
-                    Gdk.Screen.get_default(),
+                Gtk.StyleContext.remove_provider_for_display(
+                    Gdk.Display.get_default(),
                     style_provider)
         self.style_providers = []
 
@@ -411,19 +400,8 @@ class Terminator(Borg):
         profiles = self.config.base.profiles
         for profile in list(profiles.keys()):
             if profiles[profile]['use_theme_colors']:
-                # Create a dummy window/vte and realise it so it has correct
-                # values to read from
-                tmp_win = Gtk.Window()
-                tmp_vte = Vte.Terminal()
-                tmp_win.add(tmp_vte)
-                tmp_win.realize()
-                bgcolor = tmp_vte.get_style_context().get_background_color(Gtk.StateType.NORMAL)
-                bgcolor = "#{0:02x}{1:02x}{2:02x}".format(int(bgcolor.red  * 255),
-                                                          int(bgcolor.green * 255),
-                                                          int(bgcolor.blue * 255))
-                tmp_win.remove(tmp_vte)
-                del(tmp_vte)
-                del(tmp_win)
+                # GTK4: background_color via style_context removed; use theme default
+                bgcolor = "#000000"
             else:
                 bgcolor = Gdk.RGBA()
                 bgcolor = profiles[profile]['background_color']
@@ -478,9 +456,17 @@ class Terminator(Borg):
             css += """
                 .terminator-terminal-window separator {
                     min-height: %spx;
-                    min-width: %spx; 
+                    min-width: %spx;
                 }
                 """ % (self.config['handle_size'],self.config['handle_size'])
+        # Compact the right-click context menu so all items fit without scrolling.
+        css += """
+            popover.menu modelbutton {
+                min-height: 20px;
+                padding-top: 2px;
+                padding-bottom: 2px;
+            }
+            """
         style_provider = Gtk.CssProvider()
         style_provider.load_from_data(css.encode('utf-8'))
         self.style_providers.append(style_provider)
@@ -488,8 +474,8 @@ class Terminator(Borg):
         # Apply the providers, incrementing priority so they don't cancel out
         # each other
         for idx in range(0, len(self.style_providers)):
-            Gtk.StyleContext.add_provider_for_screen(
-                Gdk.Screen.get_default(),
+            Gtk.StyleContext.add_provider_for_display(
+                Gdk.Display.get_default(),
                 self.style_providers[idx],
                 Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION+idx)
 
@@ -564,18 +550,29 @@ class Terminator(Borg):
             for group in todestroy:
                 self.groups.remove(group)
 
+    def _feed_key_to_vte(self, vte, event):
+        """Feed a key event as text to a VTE widget (GTK4 group broadcast)"""
+        try:
+            keyval = getattr(event, 'keyval', None)
+            if keyval is not None:
+                char = chr(Gdk.keyval_to_unicode(keyval))
+                if char and char != '\x00':
+                    vte.feed_child(char.encode('utf-8'))
+        except (ValueError, TypeError):
+            pass
+
     def group_emit(self, terminal, group, type, event):
         """Emit to each terminal in a group"""
         dbg('emitting a keystroke for group %s' % group)
         for term in self.terminals:
             if term != terminal and term.group == group:
-                term.vte.emit(type, eventkey2gdkevent(event))
+                self._feed_key_to_vte(term.vte, event)
 
     def all_emit(self, terminal, type, event):
         """Emit to all terminals"""
         for term in self.terminals:
             if term != terminal:
-                term.vte.emit(type, eventkey2gdkevent(event))
+                self._feed_key_to_vte(term.vte, event)
 
     def do_enumerate(self, widget, pad):
         """Insert the number of each terminal in a group, into that terminal"""

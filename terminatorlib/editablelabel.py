@@ -17,148 +17,157 @@
 #    , Boston, MA  02110-1301  USA
 
 """ Editable Label class"""
-from gi.repository import GLib, GObject, Gtk, Gdk
+from gi.repository import GLib, GObject, Gtk, Gdk, Pango
 
-class EditableLabel(Gtk.EventBox):
+class EditableLabel(Gtk.Box):
     # pylint: disable-msg=W0212
     # pylint: disable-msg=R0904
     """
-    An eventbox that partially emulate a Gtk.Label
-    On double-click or key binding the label is editable, entering an empty
-    will revert back to automatic text
+    A box that partially emulates a Gtk.Label.
+    On double-click or key binding the label is editable; entering an empty
+    string reverts back to automatic text.
     """
     _label = None
-    _ebox = None
     _autotext = None
     _custom = None
     _entry = None
-    _entry_handler_id = None
+    _entry_controllers = None
+    _fg_provider = None
 
     __gsignals__ = {
             'edit-done': (GObject.SignalFlags.RUN_LAST, None, ()),
     }
 
-    def __init__(self, text = ""):
-        """ Class initialiser"""
-        GObject.GObject.__init__(self) 
+    def __init__(self, text=""):
+        GObject.GObject.__init__(self)
 
-        self._entry_handler_id = []
+        self._entry_controllers = []
         self._label = Gtk.Label(label=text, ellipsize='end')
         self._custom = False
-        self.set_visible_window (False)
-        self.add (self._label)  
-        self.connect ("button-press-event", self._on_click_text)
+        self.append(self._label)
 
-    def set_angle(self, angle ):
-        """set angle of the label"""
-        self._label.set_angle( angle )
+        gesture = Gtk.GestureClick()
+        gesture.set_button(1)
+        gesture.connect('pressed', self._on_click_text)
+        self.add_controller(gesture)
+
+    def set_angle(self, angle):
+        """set angle of the label (no-op in GTK4, label rotation removed)"""
+        pass
 
     def editing(self):
         """Return if we are currently editing"""
-        return(self._entry != None)
+        return self._entry is not None
 
     def set_text(self, text, force=False):
         """set the text of the label"""
         self._autotext = text
         if not self._custom or force:
-            self._label.set_text(text) 
+            self._label.set_text(text)
 
     def get_text(self):
         """get the text from the label"""
-        return(self._label.get_text())
+        return self._label.get_text()
 
     def edit(self):
-        """ Start editing the widget text """
+        """Start editing the widget text"""
         if self._entry:
             return False
-        self.remove (self._label)
-        self._entry = Gtk.Entry ()
-        self._entry.set_text (self._label.get_text ())
-        self._entry.show ()
-        self.add (self._entry)
-        sig = self._entry.connect ("focus-out-event", self._entry_to_label)
-        self._entry_handler_id.append(sig)
-        sig = self._entry.connect ("activate", self._on_entry_activated)
-        self._entry_handler_id.append(sig)
-        sig = self._entry.connect ("key-press-event",
-                                     self._on_entry_keypress)
-        self._entry_handler_id.append(sig)
-        sig = self._entry.connect("button-press-event",
-                                  self._on_entry_buttonpress)
-        self._entry_handler_id.append(sig)
-        self._entry.grab_focus ()
+        self.remove(self._label)
+        self._entry = Gtk.Entry()
+        self._entry.set_text(self._label.get_text())
+        self.append(self._entry)
 
-    def _on_click_text(self, widget, event):
-        # pylint: disable-msg=W0613
-        """event handling text edition"""
-        if event.button != 1:
-            return False
-        if event.type == Gdk.EventType._2BUTTON_PRESS:
+        focus_ctrl = Gtk.EventControllerFocus()
+        focus_ctrl.connect('leave', self._on_entry_focus_leave)
+        self._entry.add_controller(focus_ctrl)
+        self._entry_controllers.append(focus_ctrl)
+
+        key_ctrl = Gtk.EventControllerKey()
+        key_ctrl.connect('key-pressed', self._on_entry_keypress)
+        self._entry.add_controller(key_ctrl)
+        self._entry_controllers.append(key_ctrl)
+
+        btn_gesture = Gtk.GestureClick()
+        btn_gesture.set_button(3)
+        btn_gesture.connect('pressed', self._on_entry_buttonpress)
+        self._entry.add_controller(btn_gesture)
+        self._entry_controllers.append(btn_gesture)
+
+        self._entry.connect('activate', self._on_entry_activated)
+        self._entry.grab_focus()
+
+    def _on_click_text(self, gesture, n_press, x, y):
+        if n_press == 2:
             self.edit()
-            return(True)
-        return(False)
+            gesture.set_state(Gtk.EventSequenceState.CLAIMED)
 
-    def _entry_to_label (self, widget, event):
-        # pylint: disable-msg=W0613
-        """replace Gtk.Entry by the Gtk.Label"""
-        if self._entry and self._entry in self.get_children():
-            #disconnect signals to avoid segfault :s
-            for sig in self._entry_handler_id:
-                if self._entry.handler_is_connected(sig):
-                    self._entry.disconnect(sig)
-            self._entry_handler_id = []
-            self.remove (self._entry)
-            self.add (self._label)
+    def _entry_to_label(self):
+        """Replace Gtk.Entry with Gtk.Label"""
+        if self._entry and self._entry is self.get_first_child():
+            self._entry_controllers = []
+            self.remove(self._entry)
             self._entry = None
-            self.show_all ()
+            self.append(self._label)
             self.emit('edit-done')
-            return(True)
-        return(False)
+            return True
+        return False
 
-    def _on_entry_activated (self, widget):
-        # pylint: disable-msg=W0613
-        """get the text entered in Gtk.Entry"""
-        entry = self._entry.get_text ()
-        label = self._label.get_text ()
+    def _on_entry_focus_leave(self, ctrl):
+        self._entry_to_label()
+
+    def _on_entry_activated(self, widget):
+        """Get the text entered in Gtk.Entry"""
+        entry = self._entry.get_text()
+        label = self._label.get_text()
         if entry == '':
             self._custom = False
-            self.set_text (self._autotext)
+            self.set_text(self._autotext)
         elif entry != label:
             self._custom = True
-            self._label.set_text (entry)
-        self._entry_to_label (None, None)
+            self._label.set_text(entry)
+        self._entry_to_label()
 
-    def _on_entry_keypress (self, widget, event):
-        # pylint: disable-msg=W0613
-        """handle keypressed in Gtk.Entry"""
-        key = Gdk.keyval_name (event.keyval)
+    def _on_entry_keypress(self, ctrl, keyval, keycode, state):
+        """Handle keypresses in Gtk.Entry"""
+        key = Gdk.keyval_name(keyval)
         if key == 'Escape':
-            self._entry_to_label (None, None)
+            self._entry_to_label()
 
-    def _on_entry_buttonpress (self, widget, event):
-        """handle button events in Gtk.Entry."""
-        # Block right clicks to avoid a deadlock.
-        # The correct solution here would be for _entry_to_label to trigger a
-        # deferred execution handler and for that handler to check if focus is
-        # in a GtkMenu. The problem being that we are unable to get a context
-        # menu for the GtkEntry.
-        if event.button == 3:
-            return True
+    def _on_entry_buttonpress(self, gesture, n_press, x, y):
+        """Block right-click context menu to avoid deadlock"""
+        gesture.set_state(Gtk.EventSequenceState.CLAIMED)
 
     def modify_fg(self, state, color):
-        """Set the label foreground"""
-        self._label.modify_fg(state, color)
+        """Set the label foreground color"""
+        if color is None:
+            if self._fg_provider:
+                self._label.get_style_context().remove_provider(self._fg_provider)
+                self._fg_provider = None
+            return
+        if hasattr(color, 'to_string'):
+            css = "* { color: %s; }" % color.to_string()
+        else:
+            return
+        if self._fg_provider is None:
+            self._fg_provider = Gtk.CssProvider()
+            self._label.get_style_context().add_provider(
+                self._fg_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+        self._fg_provider.load_from_data(css.encode())
 
     def is_custom(self):
         """Return whether or not we have a custom string set"""
-        return(self._custom)
+        return self._custom
 
     def set_custom(self):
         """Set the customness of the string to True"""
         self._custom = True
 
     def modify_font(self, fontdesc):
-        """Set the label font using a pango.FontDescription"""
-        self._label.modify_font(fontdesc)
+        """Set the label font using a Pango.FontDescription"""
+        if fontdesc:
+            attrs = Pango.AttrList()
+            attrs.insert(Pango.attr_font_desc_new(fontdesc))
+            self._label.set_attributes(attrs)
 
 GObject.type_register(EditableLabel)

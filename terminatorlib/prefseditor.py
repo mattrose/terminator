@@ -8,7 +8,7 @@ write it to a config file
 """
 
 import os,sys,re
-from gi.repository import GObject, Gtk, Gdk
+from gi.repository import GObject, GLib, Gtk, Gdk
 
 from .util import dbg, err
 from . import config
@@ -21,15 +21,25 @@ from .version import APP_NAME
 from .plugin import KeyBindUtil
 
 def get_color_string(widcol):
-    return('#%02x%02x%02x' % (widcol.red>>8, widcol.green>>8, widcol.blue>>8))
+    if hasattr(widcol, 'red') and isinstance(widcol.red, float):
+        # Gdk.RGBA: components are 0.0-1.0
+        return '#%02x%02x%02x' % (int(widcol.red * 255), int(widcol.green * 255), int(widcol.blue * 255))
+    # Legacy Gdk.Color: components are 0-65535
+    return '#%02x%02x%02x' % (widcol.red >> 8, widcol.green >> 8, widcol.blue >> 8)
+
+def _parse_rgba(color_str):
+    """Parse a color string into a Gdk.RGBA"""
+    from gi.repository import Gdk as _Gdk
+    rgba = _Gdk.RGBA()
+    rgba.parse(color_str)
+    return rgba
 
 def color2hex(widget):
-    """Pull the colour values out of a Gtk ColorPicker widget and return them
-   as 8bit hex values, sinces its default behaviour is to give 16bit values"""
-    return get_color_string(widget.get_color())
+    """Pull the colour values out of a Gtk ColorButton widget as 8-bit hex"""
+    return get_color_string(widget.get_rgba())
 
 def rgba2hex(widget):
-    return get_color_string(widget.get_rgba().to_color())
+    return get_color_string(widget.get_rgba())
 
 NUM_PALETTE_COLORS = 16
 
@@ -193,7 +203,7 @@ class PrefsEditor:
         self.config = config.Config()
         self.config.base.reload()
         self.term = term
-        self.calling_window = self.term.get_toplevel()
+        self.calling_window = self.term.get_root()
         self.calling_window.preventHide = True
         self.builder = Gtk.Builder()
         self.builder.set_translation_domain(APP_NAME)
@@ -210,21 +220,91 @@ class PrefsEditor:
             print(ex)
             return
 
-        self.builder.add_from_string(gladedata)
+        # GTK4: BuilderCScope doesn't pass the widget arg correctly to Python
+        # bound methods. Instead, strip <signal> elements from the glade data
+        # and reconnect them manually via widget.connect() after loading.
+        import re
+        import xml.etree.ElementTree as ET
+
+        # Collect (widget_id, signal_name, handler_name, swapped, object_id) before stripping.
+        _signals = []
+        try:
+            _root = ET.fromstring(gladedata)
+            for _obj in _root.iter('object'):
+                _oid = _obj.get('id')
+                if not _oid:
+                    continue
+                for _sig in _obj.findall('signal'):
+                    _sname = _sig.get('name')
+                    _hname = _sig.get('handler')
+                    _swapped = _sig.get('swapped') == 'yes'
+                    _extra_obj_id = _sig.get('object')
+                    if _sname and _hname:
+                        _signals.append((_oid, _sname, _hname, _swapped, _extra_obj_id))
+        except Exception as ex:
+            err('Failed to parse glade signals: %s' % ex)
+
+        # Strip all signal declarations so GTK4 never tries to resolve them.
+        clean_glade = re.sub(r'<signal\b[^>]*/>', '', gladedata)
+
+        try:
+            self.builder.add_from_string(clean_glade)
+        except Exception as ex:
+            err('Failed to load preferences.glade: %s' % ex)
+            return
         self.window = self.builder.get_object('prefswin')
 
-        icon_theme = Gtk.IconTheme.get_default()
-        if icon_theme.lookup_icon('terminator-preferences', 48, 0):
+        from gi.repository import Gdk as _Gdk
+        try:
+            icon_theme = Gtk.IconTheme.get_for_display(_Gdk.Display.get_default())
+        except AttributeError:
+            icon_theme = Gtk.IconTheme.get_default()
+        try:
+            has_icon = icon_theme.has_icon('terminator-preferences')
+        except Exception:
+            has_icon = icon_theme.lookup_icon('terminator-preferences', 48, 0) is not None
+        if has_icon:
             self.window.set_icon_name('terminator-preferences')
         else:
             dbg('Unable to load Terminator preferences icon')
-            icon = self.window.render_icon(Gtk.STOCK_DIALOG_INFO, Gtk.IconSize.BUTTON)
-            self.window.set_icon(icon)
+
+        # GTK4 on macOS dark mode causes treeview cell text to render in a light
+        # color that's invisible against the preferences window's light background.
+        # Override at PRIORITY_USER (800) so it takes precedence over the macOS
+        # GTK4 backend's dark-mode color injection (which sits around priority 700).
+        _tvcss = Gtk.CssProvider()
+        _tvcss.load_from_data(b'treeview { color: @theme_fg_color; }')
+        Gtk.StyleContext.add_provider_for_display(
+            _Gdk.Display.get_default(), _tvcss,
+            Gtk.STYLE_PROVIDER_PRIORITY_USER)
 
         self.layouteditor = LayoutEditor(self.builder)
-        self.builder.connect_signals(self)
         self.layouteditor.prepare()
-        self.window.show_all()
+
+        # Reconnect signals using Python's native connect() so bound methods
+        # receive the widget argument correctly.
+        for _oid, _sname, _hname, _swapped, _extra_obj_id in _signals:
+            _widget = self.builder.get_object(_oid)
+            if _widget is None:
+                continue
+            _handler = getattr(self, _hname, None)
+            if _handler is None:
+                dbg('Missing signal handler: %s' % _hname)
+                continue
+            try:
+                if _swapped and _extra_obj_id:
+                    _extra_obj = self.builder.get_object(_extra_obj_id)
+                    if _extra_obj is not None:
+                        _widget.connect_object(_sname, _handler, _extra_obj)
+                        continue
+                _widget.connect(_sname, _handler)
+            except Exception as ex:
+                dbg('Cannot connect %s.%s -> %s: %s' % (_oid, _sname, _hname, ex))
+
+        self._setup_color_widgets()
+
+        self.window.set_transient_for(self.calling_window)
+        self.window.present()
         try:
             self.config.inhibit_save()
             self.set_values()
@@ -237,6 +317,37 @@ class PrefsEditor:
         nb.set_current_page(cur_page)
 
         self.config.base.save_config_with_suffix('_cur')
+
+    def _setup_color_widgets(self):
+        """Wire up DrawingArea draw funcs and click handlers for color swatches.
+        Must be called once after the builder is fully loaded."""
+        guiget = self.builder.get_object
+
+        fg_widget = guiget('foreground_colorbutton')
+        bg_widget = guiget('background_colorbutton')
+        if fg_widget:
+            fg_widget.set_draw_func(self.on_foreground_colorbutton_draw)
+            gesture = Gtk.GestureClick.new()
+            gesture.connect('pressed', self.on_foreground_colorbutton_click)
+            fg_widget.add_controller(gesture)
+        if bg_widget:
+            bg_widget.set_draw_func(self.on_background_colorbutton_draw)
+            gesture = Gtk.GestureClick.new()
+            gesture.connect('pressed', self.on_background_colorbutton_click)
+            bg_widget.add_controller(gesture)
+
+        for palette_id in range(0, NUM_PALETTE_COLORS):
+            widget = self.get_palette_widget(palette_id)
+            if widget is None:
+                continue
+            def _draw(area, cr, w, h, pid=palette_id):
+                self._draw_palette_swatch(area, cr, w, h, pid)
+            widget.set_draw_func(_draw)
+            gesture = Gtk.GestureClick.new()
+            def _on_palette_click(gesture, n, x, y, pw=widget):
+                self.edit_palette_button(pw)
+            gesture.connect('pressed', _on_palette_click)
+            widget.add_controller(gesture)
 
     def on_destroy_event(self, _widget):
         self.config.base.remove_config_with_suffix('_cur')
@@ -489,21 +600,15 @@ class PrefsEditor:
 
             return False
 
-        def on_search(widget, text):
+        def on_search(widget):
             MAX_SEARCH_LEN = 10
             self.keybind_filter_str = widget.get_text()
             ln = len(self.keybind_filter_str)
-            #its a small list & we are eager for quick search, but limit
-            if (ln >=2 and ln < MAX_SEARCH_LEN):
+            if (ln >= 2 and ln < MAX_SEARCH_LEN) or ln == 0:
                 dbg("filter search str: %s" % self.keybind_filter_str)
                 self.treemodelfilter.refilter()
 
-        def on_search_refilter(widget):
-            dbg("refilter")
-            self.treemodelfilter.refilter()
-
-        kbsearch.connect('key-press-event', on_search)
-        kbsearch.connect('backspace', on_search_refilter)
+        kbsearch.connect('changed', on_search)
 
         liststore = widget.get_model()
         liststore.set_sort_column_id(0, Gtk.SortType.ASCENDING)
@@ -571,9 +676,9 @@ class PrefsEditor:
         if self.config['use_system_font'] == True:
             fontname = self.config.get_system_mono_font()
             if fontname is not None:
-                widget.set_font_name(fontname)
+                widget.set_font(fontname)
         else:
-            widget.set_font_name(self.config['font'])
+            widget.set_font(self.config['font'])
         # Allow bold text
         widget = guiget('allow_bold_checkbutton')
         widget.set_active(self.config['allow_bold'])
@@ -619,21 +724,21 @@ class PrefsEditor:
         # Cursor foreground
         widget = guiget('cursor_fg_color')
         try:
-            widget.set_color(Gdk.color_parse(self.config['cursor_fg_color']))
+            widget.set_rgba(_parse_rgba(self.config['cursor_fg_color']))
         except:
             try:
-                widget.set_color(Gdk.color_parse(self.config['background_color']))
+                widget.set_rgba(_parse_rgba(self.config['background_color']))
             except:
-                widget.set_color(Gdk.color_parse('#000000'))
+                widget.set_rgba(_parse_rgba('#000000'))
         # Cursor background
         widget = guiget('cursor_bg_color')
         try:
-            widget.set_color(Gdk.color_parse(self.config['cursor_bg_color']))
+            widget.set_rgba(_parse_rgba(self.config['cursor_bg_color']))
         except:
             try:
-                widget.set_color(Gdk.color_parse(self.config['foreground_color']))
+                widget.set_rgba(_parse_rgba(self.config['foreground_color']))
             except:
-                widget.set_color(Gdk.color_parse('#ffffff'))
+                widget.set_rgba(_parse_rgba('#ffffff'))
 
         ## Command tab
         # Login shell
@@ -681,20 +786,19 @@ class PrefsEditor:
                 scheme = 'custom'
         # NOTE: The scheme is set in the GUI widget after the fore/back colours
         # Foreground color
-        widget = guiget('foreground_colorbutton')
-        widget.set_events(Gdk.EventMask.BUTTON_PRESS_MASK)
-
+        fg_btn = guiget('foreground_colorbutton')
         if scheme == 'custom':
-            widget.set_sensitive(True)
+            fg_btn.set_sensitive(True)
         else:
-            widget.set_sensitive(False)
+            fg_btn.set_sensitive(False)
+        fg_btn.queue_draw()
         # Background color
-        widget = guiget('background_colorbutton')
-        widget.set_events(Gdk.EventMask.BUTTON_PRESS_MASK)
+        bg_btn = guiget('background_colorbutton')
         if scheme == 'custom':
-            widget.set_sensitive(True)
+            bg_btn.set_sensitive(True)
         else:
-            widget.set_sensitive(False)
+            bg_btn.set_sensitive(False)
+        bg_btn.queue_draw()
         # Now actually set the scheme
         widget = guiget('color_scheme_combobox')
         widget.set_active(self.colorschemevalues[scheme])
@@ -711,12 +815,6 @@ class PrefsEditor:
                 palette = 'custom'
         # NOTE: The palette selector is set after the colour pickers
         # Palette colour pickers
-        for palette_id in range(0, NUM_PALETTE_COLORS):
-            widget = self.get_palette_widget(palette_id)
-            widget.set_events(Gdk.EventMask.BUTTON_PRESS_MASK)
-            def on_palette_click(event, data, widget=widget):
-                self.edit_palette_button(widget)
-            widget.connect('button-press-event', on_palette_click)
         self.load_palette()
         # Now set the palette selector widget
         widget = guiget('palette_combobox')
@@ -750,9 +848,9 @@ class PrefsEditor:
         elif self.config['background_type'] == 'image':
             guiget('image_radiobutton').set_active(True)
         self.update_background_tab()
-        # Background image
+        # Background image (widget is now a GtkButton since GtkFileChooserButton is gone)
         widget = guiget('background_image_file')
-        widget.set_filename(self.config['background_image'])
+        widget.set_label(self.config['background_image'] or _('Choose file...'))
 
         widget = guiget('background_image_mode_combobox')
         if self.config['background_image_mode'] == 'scale_and_fit':
@@ -844,7 +942,7 @@ class PrefsEditor:
             'title_receive_fg_color', 'title_receive_bg_color',
             'title_inactive_fg_color', 'title_inactive_bg_color']:
             widget = guiget(bit)
-            widget.set_color(Gdk.color_parse(self.config[bit]))
+            widget.set_rgba(_parse_rgba(self.config[bit]))
         # Hide size text from the title bar
         widget = guiget('title_hide_sizetextcheck')
         widget.set_active(self.config['title_hide_sizetext'])
@@ -857,9 +955,9 @@ class PrefsEditor:
         if self.config['title_use_system_font'] == True:
             fontname = self.config.get_system_prop_font()
             if fontname is not None:
-                widget.set_font_name(fontname)
+                widget.set_font(fontname)
         else:
-            widget.set_font_name(self.config['title_font'])
+            widget.set_font(self.config['title_font'])
 
     def set_layout(self, layout_name):
         """Set a layout"""
@@ -1105,7 +1203,22 @@ class PrefsEditor:
         self.config['scrollbar_position'] = value
         self.config.save()
 
-    def on_background_image_file_set(self,widget):
+    def on_background_image_file_clicked(self, widget):
+        dialog = Gtk.FileDialog.new()
+        dialog.set_title(_('Choose background image'))
+        def on_open(d, result):
+            try:
+                f = d.open_finish(result)
+                if f:
+                    path = f.get_path() or ''
+                    widget.set_label(path or _('Choose file...'))
+                    self.config['background_image'] = path
+                    self.config.save()
+            except Exception:
+                pass
+        dialog.open(self.window, None, on_open)
+
+    def on_background_image_file_set(self, widget):
         self.config['background_image'] = widget.get_filename()
         self.config.save()
 
@@ -1170,8 +1283,7 @@ class PrefsEditor:
             palette = self.palettes[value]
             palettebits = palette.split(':')
             for palette_id in range(0, NUM_PALETTE_COLORS):
-                # Update the visible elements
-                color = Gdk.color_parse(palettebits[palette_id])
+                color = _parse_rgba(palettebits[palette_id])
                 self.load_palette_color(palette_id, color)
         elif value == 'custom':
             palettebits = []
@@ -1186,65 +1298,85 @@ class PrefsEditor:
         self.config['palette'] = palette
         self.config.save()
 
-    def on_foreground_colorbutton_draw(self, widget, cr):
-        width = widget.get_allocated_width()
-        height = widget.get_allocated_height()
-        col = Gdk.color_parse(self.config['foreground_color'])
+    def on_foreground_colorbutton_draw(self, widget, cr, width, height):
+        col = _parse_rgba(self.config['foreground_color'])
         cr.rectangle(0, 0, width, height)
         cr.set_source_rgba(0.7, 0.7, 0.7, 1)
         cr.fill()
         cr.rectangle(1, 1, width-2, height-2)
-        cr.set_source_rgba(col.red_float, col.green_float, col.blue_float)
+        cr.set_source_rgba(col.red, col.green, col.blue)
         cr.fill()
 
-    def on_foreground_colorbutton_click(self, event, data):
+    def on_foreground_colorbutton_click(self, gesture, n_press, x, y):
         dialog = Gtk.ColorChooserDialog("Choose Terminal Text Color")
         fg = self.config['foreground_color']
-        dialog.set_rgba(Gdk.RGBA.from_color(Gdk.color_parse(self.config['foreground_color'])))
+        rgba = Gdk.RGBA()
+        rgba.parse(self.config['foreground_color'])
+        dialog.set_rgba(rgba)
         dialog.connect('notify::rgba', self.on_foreground_colorpicker_color_change)
-        res = dialog.run()
-        if res != Gtk.ResponseType.OK:
+        result = [Gtk.ResponseType.CANCEL]
+        loop = GLib.MainLoop()
+        def on_response(d, r):
+            result[0] = r
+            d.destroy()
+            loop.quit()
+        dialog.connect('response', on_response)
+        dialog.present()
+        loop.run()
+        if result[0] != Gtk.ResponseType.OK:
             self.config['foreground_color'] = fg
             self.config.save()
             terminator = Terminator()
             terminator.reconfigure()
-        dialog.destroy()
 
     def on_foreground_colorpicker_color_change(self, widget, color):
         """Foreground color changed"""
         self.config['foreground_color'] = rgba2hex(widget)
         self.config.save()
+        fg_btn = self.builder.get_object('foreground_colorbutton')
+        if fg_btn:
+            fg_btn.queue_draw()
         terminator = Terminator()
         terminator.reconfigure()
 
-    def on_background_colorbutton_draw(self, widget, cr):
-        width = widget.get_allocated_width()
-        height = widget.get_allocated_height()
-        col = Gdk.color_parse(self.config['background_color'])
+    def on_background_colorbutton_draw(self, widget, cr, width, height):
+        col = _parse_rgba(self.config['background_color'])
         cr.rectangle(0, 0, width, height)
         cr.set_source_rgba(0.7, 0.7, 0.7, 1)
         cr.fill()
         cr.rectangle(1, 1, width-2, height-2)
-        cr.set_source_rgba(col.red_float, col.green_float, col.blue_float)
+        cr.set_source_rgba(col.red, col.green, col.blue)
         cr.fill()
 
-    def on_background_colorbutton_click(self, event, data):
+    def on_background_colorbutton_click(self, gesture, n_press, x, y):
         dialog = Gtk.ColorChooserDialog("Choose Terminal Background Color")
         orig = self.config['background_color']
         dialog.connect('notify::rgba', self.on_background_colorpicker_color_change)
-        dialog.set_rgba(Gdk.RGBA.from_color(Gdk.color_parse(orig)))
-        res = dialog.run()
-        if res != Gtk.ResponseType.OK:
+        rgba = Gdk.RGBA()
+        rgba.parse(orig)
+        dialog.set_rgba(rgba)
+        result = [Gtk.ResponseType.CANCEL]
+        loop = GLib.MainLoop()
+        def on_response(d, r):
+            result[0] = r
+            d.destroy()
+            loop.quit()
+        dialog.connect('response', on_response)
+        dialog.present()
+        loop.run()
+        if result[0] != Gtk.ResponseType.OK:
             self.config['background_color'] = orig
             self.config.save()
             terminator = Terminator()
             terminator.reconfigure()
-        dialog.destroy()
 
     def on_background_colorpicker_color_change(self, widget, color):
         """Background color changed"""
         self.config['background_color'] = rgba2hex(widget)
         self.config.save()
+        bg_btn = self.builder.get_object('background_colorbutton')
+        if bg_btn:
+            bg_btn.queue_draw()
         terminator = Terminator()
         terminator.reconfigure()
 
@@ -1261,22 +1393,20 @@ class PrefsEditor:
         return None
 
     def get_palette_color(self, palette_id):
-        """Returns the configured Gdk color for the given palette ID."""
+        """Returns the configured Gdk.RGBA for the given palette ID."""
         if self.config['palette'] in self.palettes:
             colourpalette = self.palettes[self.config['palette']]
         else:
             colourpalette = self.config['palette'].split(':')
-        return Gdk.color_parse(colourpalette[palette_id])
+        return _parse_rgba(colourpalette[palette_id])
 
-    def on_palette_colorpicker_draw(self, widget, cr):
-        width = widget.get_allocated_width()
-        height = widget.get_allocated_height()
+    def _draw_palette_swatch(self, widget, cr, width, height, palette_id):
         cr.rectangle(0, 0, width, height)
         cr.set_source_rgba(0.7, 0.7, 0.7, 1)
         cr.fill()
         cr.rectangle(1, 1, width-2, height-2)
-        col = self.get_palette_color(self.get_palette_id(widget))
-        cr.set_source_rgba(col.red_float, col.green_float, col.blue_float)
+        col = self.get_palette_color(palette_id)
+        cr.set_source_rgba(col.red, col.green, col.blue)
         cr.fill()
 
     def load_palette_color(self, palette_id, color):
@@ -1297,7 +1427,7 @@ class PrefsEditor:
         """Load the palette from the configuration into the color buttons."""
         colourpalette = self.config['palette'].split(':')
         for palette_id in range(0, NUM_PALETTE_COLORS):
-            color = Gdk.color_parse(colourpalette[palette_id])
+            color = _parse_rgba(colourpalette[palette_id])
             self.load_palette_color(palette_id, color)
 
     def edit_palette_button(self, widget):
@@ -1307,21 +1437,30 @@ class PrefsEditor:
         palette_id = self.get_palette_id(widget)
         orig = self.get_palette_color(palette_id)
 
+        dialog = None
         try:
             # Create the dialog to choose a custom color
             dialog = Gtk.ColorChooserDialog("Choose Palette Color")
-            dialog.set_rgba(Gdk.RGBA.from_color(orig))
+            rgba = Gdk.RGBA()
+            rgba.parse(get_color_string(orig))
+            dialog.set_rgba(rgba)
 
             def on_color_set(_, color):
-                # The color is set, so save the palette config and refresh Terminator
-                self.replace_palette_color(palette_id, dialog.get_rgba().to_color())
+                self.replace_palette_color(palette_id, dialog.get_rgba())
                 terminator.reconfigure()
             dialog.connect('notify::rgba', on_color_set)
 
-            # Show the dialog
-            res = dialog.run()
-            if res != Gtk.ResponseType.OK:
-                # User cancelled the color change, so reset to the original.
+            result = [Gtk.ResponseType.CANCEL]
+            loop = GLib.MainLoop()
+            def on_response(d, r):
+                result[0] = r
+                d.destroy()
+                loop.quit()
+            dialog.connect('response', on_response)
+            dialog.present()
+            loop.run()
+            dialog = None
+            if result[0] != Gtk.ResponseType.OK:
                 self.replace_palette_color(palette_id, orig)
                 terminator.reconfigure()
         finally:
@@ -1395,12 +1534,12 @@ class PrefsEditor:
 
     def on_font_selector_font_set(self, widget):
         """Font changed"""
-        self.config['font'] = widget.get_font_name()
+        self.config['font'] = widget.get_font()
         self.config.save()
 
     def on_title_font_selector_font_set(self, widget):
         """Titlebar Font changed"""
-        self.config['title_font'] = widget.get_font_name()
+        self.config['title_font'] = widget.get_font()
         self.config.save()
 
     def on_title_receive_bg_color_color_set(self, widget):
@@ -1730,9 +1869,9 @@ class PrefsEditor:
         if self.config['use_system_font'] == True:
             fontname = self.config.get_system_mono_font()
             if fontname is not None:
-                widget.set_font_name(fontname)
+                widget.set_font(fontname)
         else:
-            widget.set_font_name(self.config['font'])
+            widget.set_font(self.config['font'])
 
     def on_title_system_font_checkbutton_toggled(self, checkbox):
         """Toggling the title_use_system_font checkbox needs to alter the
@@ -1748,9 +1887,9 @@ class PrefsEditor:
         if self.config['title_use_system_font'] == True:
             fontname = self.config.get_system_prop_font()
             if fontname is not None:
-                widget.set_font_name(fontname)
+                widget.set_font(fontname)
         else:
-            widget.set_font_name(self.config['title_font'])
+            widget.set_font(self.config['title_font'])
 
     def on_reset_compatibility_clicked(self, widget):
         """Reset the confusing and annoying backspace/delete options to the
@@ -1939,6 +2078,8 @@ class PrefsEditor:
             self.config['foreground_color'] = forecol
             self.config['background_color'] = backcol
         self.config.save()
+        fore.queue_draw()
+        back.queue_draw()
         terminator = Terminator()
         terminator.reconfigure()
 
@@ -1976,20 +2117,20 @@ class PrefsEditor:
         # Ignore `Gdk.KEY_Tab` so that `Shift+Tab` is displayed as `Shift+Tab`
         # in `Preferences>Keybindings` and NOT `Left Tab` (see `Gdk.KEY_ISO_Left_Tab`).
         if mods & Gdk.ModifierType.SHIFT_MASK and key != Gdk.KEY_Tab:
-            key_with_shift = Gdk.Keymap.translate_keyboard_state(
-                self.keybindings.keymap,
-                hardware_keycode=_code,
-                state=Gdk.ModifierType.SHIFT_MASK,
-                group=0,
-            )
+            try:
+                display = Gdk.Display.get_default()
+                found, shift_keyval, _eff_group, shift_level, _consumed = \
+                    display.translate_key(_code, Gdk.ModifierType.SHIFT_MASK, 0)
+            except Exception:
+                found, shift_keyval, shift_level = False, key, 0
             keyval_lower, keyval_upper = Gdk.keyval_convert_case(key)
 
             # Remove the Shift modifier from `mods` if a new key binding doesn't
             # contain a letter and its key value (`key`) can't be modified by a
             # Shift key.
-            if key_with_shift.level != 0 and keyval_lower == keyval_upper:
+            if found and shift_level != 0 and keyval_lower == keyval_upper:
                 mods = Gdk.ModifierType(mods & ~Gdk.ModifierType.SHIFT_MASK)
-                key = key_with_shift.keyval
+                key = shift_keyval
 
         accel = Gtk.accelerator_name(key, mods)
         current_binding = liststore.get_value(liststore.get_iter(path), 0)
@@ -2017,7 +2158,7 @@ class PrefsEditor:
         if duplicate_bindings:
             dialog = Gtk.MessageDialog(
                 transient_for=self.window,
-                flags=Gtk.DialogFlags.MODAL,
+                modal=True,
                 message_type=Gtk.MessageType.ERROR,
                 buttons=Gtk.ButtonsType.CLOSE,
                 text="Duplicate Key Bindings Are Not Allowed",
@@ -2033,8 +2174,13 @@ class PrefsEditor:
             dialog.format_secondary_text(message)
 
             self.active_message_dialog = dialog
-            dialog.run()
-            dialog.destroy()
+            loop = GLib.MainLoop()
+            def _on_resp(d, r):
+                d.destroy()
+                loop.quit()
+            dialog.connect('response', _on_resp)
+            dialog.present()
+            loop.run()
             self.active_message_dialog = None
 
             return
@@ -2259,4 +2405,5 @@ if __name__ == '__main__':
     TERM = terminal.Terminal()
     PREFEDIT = PrefsEditor(TERM)
 
-    Gtk.main()
+    from gi.repository import GLib as _GLib
+    _GLib.MainLoop().run()

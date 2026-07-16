@@ -7,14 +7,16 @@ is copied to clipboard.
 """
 
 import gi
-gi.require_version('Vte', '2.91')  # vte-0.38 (gnome-3.14)
-from gi.repository import Vte
+gi.require_version('Gtk', '4.0')
+gi.require_version('Vte', '3.91')  # vte-0.38 (gnome-3.14)
+from gi.repository import Gtk, Vte
 
 from terminatorlib.terminator import Terminator
 
 from terminatorlib.config import Config
 import terminatorlib.plugin as plugin
 from terminatorlib.plugin import KeyBindUtil
+from terminatorlib.keybindings import KeyEventProxy
 
 from terminatorlib.util import get_config_dir, err, dbg, gerr
 from terminatorlib import regex
@@ -66,26 +68,30 @@ class MouseFreeURLHandler(plugin.Plugin):
                 [PluginUrlLaunch, PluginUrlActLaunch,      "<Alt>Return"])
 
     def connect_signals(self):
+        self._key_controllers = []
         for term in Terminator().terminals:
             dbg("signal connect term:%s" % term)
             term.connect('focus-in', self.on_focus_in)
 
         self.windows = Terminator().get_windows()
         for window in self.windows:
-            window.connect('key-press-event', self.on_keypress)
+            ctrl = Gtk.EventControllerKey()
+            ctrl.connect('key-pressed', self.on_keypress)
+            window.add_controller(ctrl)
+            self._key_controllers.append((window, ctrl))
 
     def unload(self):
         dbg("unloading")
         for term in Terminator().terminals:
             try:
                 term.disconnect_by_func(self.on_focus_in)
-            except:
+            except Exception:
                 dbg("no connected signals")
-            
-        for window in self.windows:
+
+        for window, ctrl in getattr(self, '_key_controllers', []):
             try:
-                window.disconnect_by_func(self.on_keypress)
-            except:
+                window.remove_controller(ctrl)
+            except Exception:
                 dbg("no connected signals")
 
         self.keyb.unbindkey(
@@ -120,15 +126,18 @@ class MouseFreeURLHandler(plugin.Plugin):
                 return(terminal)
         return(None)
 
-    def on_focus_in(self, widget, event = None):
+    def on_focus_in(self, widget, event=None):
         dbg("focus-in clear url search buffer widget: %s" % widget)
         self.cur_term = self.get_focussed_terminal()
-        self.vte      = self.cur_term.get_vte()
+        if self.cur_term is None:
+            return
+        self.vte = self.cur_term.get_vte()
         self.clear_search()
 
-    def on_keypress(self, widget, event):
+    def on_keypress(self, ctrl, keyval, keycode, state):
+        event = KeyEventProxy(keyval, keycode, state)
         act = self.keyb.keyaction(event)
-        dbg("keyaction: (%s) (%s)" % (str(act), event.keyval))
+        dbg("keyaction: (%s) (%s)" % (str(act), keyval))
 
         if act == PluginUrlActFindNext:
             if not self.flag_http_on:
@@ -195,7 +204,7 @@ class MouseFreeURLHandler(plugin.Plugin):
         #UI binding has to be unique. May be we can have keybinds
         #hidden from UI which plugins can use internally
 
-        if event.keyval == 65293: #<Return>
+        if keyval == 65293: #<Return>
             self.clear_search()
             return
 

@@ -1,11 +1,10 @@
 # Terminator by Chris Jones <cmsj@tenshu.net>
 # GPL v2 only
-"""terminal_popup_menu.py - classes necessary to provide a terminal context 
+"""terminal_popup_menu.py - classes necessary to provide a terminal context
 menu"""
 
-from gi.repository import Gtk, Gdk
+from gi.repository import GLib, Gtk, Gdk, Gio
 
-from .version import APP_NAME
 from .translation import _
 from .terminator import Terminator
 from .util import err, dbg, spawn_new_terminator
@@ -18,270 +17,135 @@ class TerminalPopupMenu(object):
     terminal = None
     terminator = None
     config = None
-    accelgrp = None
 
     def __init__(self, terminal):
-        """Class initialiser"""
         self.terminal = terminal
         self.terminator = Terminator()
         self.config = Config()
-        self.accelgrp = Gtk.AccelGroup()
 
-    def get_menu_item_mask(self, maskstr):
-        mask = 0
-        if maskstr is None:
-            return mask
-        maskstr = maskstr.lower()
-        if maskstr.find('<Shift>'.lower()) >= 0:
-            mask = mask | Gdk.ModifierType.SHIFT_MASK
-            dbg("adding mask <Shift> %s" % mask)
+    def show(self, parent_widget, x=0, y=0):
+        """Build and show a Gtk.PopoverMenu from Gio.Menu.
 
-        ctrl = (maskstr.find('<Control>'.lower()) >= 0 or
-                maskstr.find('<Primary>'.lower()) >= 0)
-        if ctrl:
-            mask = mask | Gdk.ModifierType.CONTROL_MASK
-            dbg("adding mask <Control> %s" % mask)
-
-        if maskstr.find('<Alt>'.lower()) >= 0:
-            mask = mask | Gdk.ModifierType.MOD1_MASK
-            dbg("adding mask <Alt> %s" % mask)
-
-        mask = Gdk.ModifierType(mask)
-        dbg("menu_item_mask :%d" % mask)
-        return mask
-
-    def menu_item(self, menutype, actstr, menustr):
-        act     = self.config.base.get_item('keybindings', actstr)
-        maskstr = act[actstr] if actstr in act else ""
-        mask    = self.get_menu_item_mask(maskstr)
-
-        accelchar = ""
-        pos = menustr.lower().find("_")
-        if (pos >= 0 and pos+1 < len(menustr)):
-            accelchar = menustr.lower()[pos+1]
-
-        #this may require tweak. what about shortcut function keys ?
-        if maskstr:
-            mpos = maskstr.rfind(">")
-            #can't have a char at 0 position as <> is len 2
-            if mpos >= 0 and mpos+1 < len(maskstr):
-                configaccelchar = maskstr[mpos+1:]
-                #ensure to take only 1 char else ignore
-                if len(configaccelchar) == 1:
-                    dbg("found accelchar in config:%s  override:%s"
-                                    %  (configaccelchar, accelchar))
-                    accelchar = configaccelchar
-
-        dbg("action from config:%s for item:%s with shortcut accelchar:(%s)"
-                                    % (maskstr, menustr, accelchar))
-        item = menutype.new_with_mnemonic(menustr)
-        item.set_name(actstr)
-        if mask:
-            item.add_accelerator("activate",
-                                self.accelgrp,
-                                Gdk.keyval_from_name(accelchar),
-                                mask,
-                                Gtk.AccelFlags.VISIBLE)
-        return item
-
-    def show(self, widget, event=None):
-        """Display the context menu"""
+        On macOS with GTK 4.14+, PopoverMenu from Gio.Menu is routed through
+        native NSMenu rather than a GdkPopup/NSPanel, so it is immune to the
+        macOS auto-dismiss problem and can extend outside the window boundary.
+        """
         terminal = self.terminal
-
-        menu = Gtk.Menu()
-        self.popup_menu = menu
-        url = None
-        button = None
-        time = None
-
         self.config.set_profile(terminal.get_profile())
 
-        if event:
-            url = terminal.vte.match_check_event(event)
-            button = event.button
-            time = event.time
-        else:
-            time = 0
-            button = 3
+        # URL detection
+        url = None
+        char_width = terminal.vte.get_char_width()
+        char_height = terminal.vte.get_char_height()
+        if char_width > 0 and char_height > 0:
+            url = terminal.vte.match_check(int(x / char_width), int(y / char_height))
 
+        menu = Gio.Menu()
+        ag = Gio.SimpleActionGroup()
+        _ctr = [0]
+
+        def action(name, callback, enabled=True):
+            a = Gio.SimpleAction(name=name)
+            a.connect('activate', lambda _a, _p: callback())
+            a.set_enabled(enabled)
+            ag.add_action(a)
+
+        def unique(prefix):
+            _ctr[0] += 1
+            return f'{prefix}-{_ctr[0]}'
+
+        # ── URL section ────────────────────────────────────────────────────
         if url and url[0]:
-            dbg("URL matches id: %d" % url[1])
-            if not url[1] in list(terminal.matches.values()):
-                err("Unknown URL match id: %d" % url[1])
-                dbg("Available matches: %s" % terminal.matches)
-
-            nameopen = None
-            namecopy = None
-            if url[1] == terminal.matches['email']:
-                nameopen = _('_Send email to...')
-                namecopy = _('_Copy email address')
-            elif url[1] == terminal.matches['voip']:
-                nameopen = _('Ca_ll VoIP address')
-                namecopy = _('_Copy VoIP address')
-            elif url[1] in list(terminal.matches.values()):
-                # This is a plugin match
-                for pluginname in terminal.matches:
-                    if terminal.matches[pluginname] == url[1]:
-                        break
-
-                dbg("Found match ID (%d) in terminal.matches plugin %s" %
-                        (url[1], pluginname))
+            nameopen = _('Open link')
+            namecopy = _('Copy address')
+            if url[1] == terminal.matches.get('email'):
+                nameopen = _('Send email to...')
+                namecopy = _('Copy email address')
+            elif url[1] == terminal.matches.get('voip'):
+                nameopen = _('Call VoIP address')
+                namecopy = _('Copy VoIP address')
+            else:
                 registry = plugin.PluginRegistry()
                 registry.load_plugins()
-                plugins = registry.get_plugins_by_capability('url_handler')
-                for urlplugin in plugins:
-                    if urlplugin.handler_name == pluginname:
-                        dbg("Identified matching plugin: %s" %
-                                urlplugin.handler_name)
+                for urlplugin in registry.get_plugins_by_capability('url_handler'):
+                    if terminal.matches.get(urlplugin.handler_name) == url[1]:
                         nameopen = _(urlplugin.nameopen)
                         namecopy = _(urlplugin.namecopy)
                         break
+            sec = Gio.Menu()
+            action('open-url', lambda: terminal.open_url(url, True))
+            sec.append(nameopen, 'menu.open-url')
+            action('copy-url', lambda: terminal.clipboard.set(terminal.prepare_url(url)))
+            sec.append(namecopy, 'menu.copy-url')
+            menu.append_section(None, sec)
 
-            if not nameopen:
-                nameopen = _('_Open link')
-            if not namecopy:
-                namecopy = _('_Copy address')
+        # ── Edit section ───────────────────────────────────────────────────
+        sec = Gio.Menu()
+        action('copy', lambda: terminal.vte.copy_clipboard(),
+               enabled=terminal.vte.get_has_selection())
+        sec.append(_('Copy'), 'menu.copy')
+        action('paste', lambda: terminal.paste_clipboard())
+        sec.append(_('Paste'), 'menu.paste')
+        action('set-title', lambda: terminal.key_edit_window_title())
+        sec.append(_('Set Window Title'), 'menu.set-title')
+        menu.append_section(None, sec)
 
-            icon = Gtk.Image.new_from_stock(Gtk.STOCK_JUMP_TO,
-                                            Gtk.IconSize.MENU)
-            item = Gtk.ImageMenuItem.new_with_mnemonic(nameopen)
-            item.set_property('image', icon)
-            item.connect('activate', lambda x: terminal.open_url(url, True))
-            menu.append(item)
-
-            item = Gtk.MenuItem.new_with_mnemonic(namecopy)
-            item.connect('activate', 
-                         lambda x: terminal.clipboard.set_text(terminal.prepare_url(url), len(terminal.prepare_url(url))))
-            menu.append(item)
-
-            menu.append(Gtk.SeparatorMenuItem())
-
-        item = self.menu_item(Gtk.ImageMenuItem, 'copy', _('_Copy'))
-        item.connect('activate', lambda x: terminal.vte.copy_clipboard())
-        item.set_sensitive(terminal.vte.get_has_selection())
-
-        menu.append(item)
-
-        item = self.menu_item(Gtk.ImageMenuItem, 'paste', _('_Paste'))
-        item.connect('activate', lambda x: terminal.paste_clipboard())
-        menu.append(item)
-
-        menu.append(Gtk.SeparatorMenuItem())
-
-        item = self.menu_item(Gtk.ImageMenuItem, 'edit_window_title',
-                                                 _('Set _Window Title'))
-        item.connect('activate', lambda x: terminal.key_edit_window_title())
-        menu.append(item)
-        
+        # ── Split / tab section (not shown when zoomed) ────────────────────
         if not terminal.is_zoomed():
-            item = self.menu_item(Gtk.ImageMenuItem, 'split_auto',
-                                                     _('Split _Auto'))
-            """
-            image = Gtk.Image()
-            image.set_from_icon_name(APP_NAME + '_auto', Gtk.IconSize.MENU)
-            item.set_image(image)
-            if hasattr(item, 'set_always_show_image'):
-                item.set_always_show_image(True)
-            """
-            item.connect('activate', lambda x: terminal.emit('split-auto',
-                self.terminal.get_cwd()))
-            menu.append(item)
-
-
-            item = self.menu_item(Gtk.ImageMenuItem, 'split_horiz',
-                                                     _('Split H_orizontally'))
-            image = Gtk.Image()
-            image.set_from_icon_name(APP_NAME + '_horiz', Gtk.IconSize.MENU)
-            item.set_image(image)
-            if hasattr(item, 'set_always_show_image'):
-                item.set_always_show_image(True)
-            item.connect('activate', lambda x: terminal.emit('split-horiz',
-                self.terminal.get_cwd()))
-            menu.append(item)
-
-            item = self.menu_item(Gtk.ImageMenuItem, 'split_vert',
-                                                     _('Split V_ertically'))
-            image = Gtk.Image()
-            image.set_from_icon_name(APP_NAME + '_vert', Gtk.IconSize.MENU)
-            item.set_image(image)
-            if hasattr(item, 'set_always_show_image'):
-                item.set_always_show_image(True)
-            item.connect('activate', lambda x: terminal.emit('split-vert',
-                self.terminal.get_cwd()))
-            menu.append(item)
-
-            item = self.menu_item(Gtk.MenuItem, 'new_tab', _('Open _Tab'))
-            item.connect('activate', lambda x: terminal.emit('tab-new', False,
-                terminal))
-            menu.append(item)
-
+            sec = Gio.Menu()
+            action('split-auto', lambda: terminal.emit('split-auto', terminal.get_cwd()))
+            sec.append(_('Split Auto'), 'menu.split-auto')
+            action('split-horiz', lambda: terminal.emit('split-horiz', terminal.get_cwd()))
+            sec.append(_('Split Horizontally'), 'menu.split-horiz')
+            action('split-vert', lambda: terminal.emit('split-vert', terminal.get_cwd()))
+            sec.append(_('Split Vertically'), 'menu.split-vert')
+            action('open-tab', lambda: terminal.emit('tab-new', False, terminal))
+            sec.append(_('Open Tab'), 'menu.open-tab')
             if self.terminator.debug_address is not None:
-                item = Gtk.MenuItem.new_with_mnemonic(_('Open _Debug Tab'))
-                item.connect('activate', lambda x:
-                        terminal.emit('tab-new', True, terminal))
-                menu.append(item)
+                action('open-debug-tab', lambda: terminal.emit('tab-new', True, terminal))
+                sec.append(_('Open Debug Tab'), 'menu.open-debug-tab')
+            menu.append_section(None, sec)
 
-            menu.append(Gtk.SeparatorMenuItem())
+        # ── Close ──────────────────────────────────────────────────────────
+        sec = Gio.Menu()
+        action('close', lambda: terminal.close())
+        sec.append(_('Close'), 'menu.close')
+        menu.append_section(None, sec)
 
-        item = self.menu_item(Gtk.ImageMenuItem, 'close_term', _('_Close'))
-        item.connect('activate', lambda x: terminal.close())
-        menu.append(item)
-
-        menu.append(Gtk.SeparatorMenuItem())
-
+        # ── Zoom ───────────────────────────────────────────────────────────
+        sec = Gio.Menu()
         if not terminal.is_zoomed():
-            sensitive = not terminal.get_toplevel() == terminal.get_parent()
-
-            item = Gtk.MenuItem.new_with_mnemonic(_('_Zoom terminal'))
-            item.connect('activate', terminal.zoom)
-            item.set_sensitive(sensitive)
-            menu.append(item)
-
-            item = Gtk.MenuItem.new_with_mnemonic(_('Ma_ximize terminal'))
-            item.connect('activate', terminal.maximise)
-            item.set_sensitive(sensitive)
-            menu.append(item)
-
-            menu.append(Gtk.SeparatorMenuItem())
+            sensitive = terminal.get_root() != terminal.get_parent()
+            action('zoom', lambda: terminal.zoom(), enabled=sensitive)
+            sec.append(_('Zoom terminal'), 'menu.zoom')
+            action('maximise', lambda: terminal.maximise(), enabled=sensitive)
+            sec.append(_('Maximise terminal'), 'menu.maximise')
         else:
-            item = Gtk.MenuItem.new_with_mnemonic(_('_Restore all terminals'))
-            item.connect('activate', terminal.unzoom)
-            menu.append(item)
+            action('unzoom', lambda: terminal.unzoom())
+            sec.append(_('Restore all terminals'), 'menu.unzoom')
+        menu.append_section(None, sec)
 
-            menu.append(Gtk.SeparatorMenuItem())
-
-        if self.config['show_titlebar'] == False:
-            item = Gtk.MenuItem.new_with_mnemonic(_('Grouping'))
-            submenu = self.terminal.populate_group_menu()
-            submenu.show_all()
-            item.set_submenu(submenu)
-            menu.append(item)
-            menu.append(Gtk.SeparatorMenuItem())
-
+        # ── Relaunch (only when process is held open) ──────────────────────
         if terminal.is_held_open:
-            item = Gtk.MenuItem.new_with_mnemonic(_('Relaunch Command'))
-            item.connect('activate', lambda x: terminal.spawn_child())
-            menu.append(item)
-            menu.append(Gtk.SeparatorMenuItem())
+            sec = Gio.Menu()
+            action('relaunch', lambda: terminal.spawn_child())
+            sec.append(_('Relaunch Command'), 'menu.relaunch')
+            menu.append_section(None, sec)
 
-        item = self.menu_item(Gtk.CheckMenuItem, 'toggle_readonly', _('_Read only'))
-        item.set_active(not(terminal.vte.get_input_enabled()))
-        item.connect('toggled', lambda x: terminal.do_readonly_toggle())
-        menu.append(item)
+        # ── Options ────────────────────────────────────────────────────────
+        sec = Gio.Menu()
+        action('readonly', lambda: terminal.do_readonly_toggle())
+        sec.append(_('Read only'), 'menu.readonly')
+        action('scrollbar', lambda: terminal.do_scrollbar_toggle())
+        sec.append(_('Show scrollbar'), 'menu.scrollbar')
+        def _open_prefs():
+            PrefsEditor(terminal)
+            return GLib.SOURCE_REMOVE
+        action('preferences', lambda: GLib.idle_add(_open_prefs))
+        sec.append(_('Preferences'), 'menu.preferences')
+        menu.append_section(None, sec)
 
-        item = self.menu_item(Gtk.CheckMenuItem, 'toggle_scrollbar',
-                                                   _('Show _scrollbar'))
-        item.set_active(terminal.scrollbar.get_property('visible'))
-        item.connect('toggled', lambda x: terminal.do_scrollbar_toggle())
-        menu.append(item)
-
-        if hasattr(Gtk, 'Builder'):  # VERIFY FOR GTK3: is this ever false?
-            item = self.menu_item(Gtk.MenuItem, 'preferences',
-                                                _('_Preferences'))
-            item.connect('activate', lambda x: PrefsEditor(self.terminal))
-            menu.append(item)
-
-        # Theme presets: (label, background, foreground)
+        # ── Colors submenu ─────────────────────────────────────────────────
         theme_items = [
             ('Solarized Light', '#eee8d5', '#586e75'),
             ('Solarized Dark', '#002b36', '#839496'),
@@ -297,92 +161,130 @@ class TerminalPopupMenu(object):
             ('Taiwanese Blue', '#005695', '#ffffff'),
             ('Solarized Blue', '#073642', '#93a1a1'),
         ]
-
-        item = Gtk.MenuItem.new_with_mnemonic(_('_Colors'))
-        submenu = Gtk.Menu()
-        item.set_submenu(submenu)
-        menu.append(item)
-
+        colors_menu = Gio.Menu()
         for theme_label, bg, fg in theme_items:
-            item = Gtk.MenuItem(theme_label)
-            item.connect('activate',
-                         lambda x, b=bg, f=fg: (terminal.set_bgcolor(b),
-                                                terminal.set_fgcolor(f)))
-            submenu.append(item)
+            aname = unique('color')
+            b, f = bg, fg
+            action(aname, lambda b=b, f=f: (terminal.set_bgcolor(b), terminal.set_fgcolor(f)))
+            colors_menu.append(theme_label, f'menu.{aname}')
+        action('pick-colors', lambda: self.pick_custom_colors(terminal))
+        colors_menu.append(_('Custom...'), 'menu.pick-colors')
+        sec = Gio.Menu()
+        sec.append_submenu(_('Colors'), colors_menu)
+        menu.append_section(None, sec)
 
-        submenu.append(Gtk.SeparatorMenuItem())
-        custom_item = Gtk.MenuItem.new_with_mnemonic(_('_Custom...'))
-        custom_item.connect('activate', lambda x: self.pick_custom_colors(terminal))
-        submenu.append(custom_item)
-
+        # ── Profiles submenu ───────────────────────────────────────────────
         profilelist = sorted(self.config.list_profiles(), key=str.lower)
-
         if len(profilelist) > 1:
-            item = Gtk.MenuItem.new_with_mnemonic(_('Profiles'))
-            submenu = Gtk.Menu()
-            item.set_submenu(submenu)
-            menu.append(item)
-
-            current = terminal.get_profile()
-
-            group = None
-
+            profiles_menu = Gio.Menu()
             for profile in profilelist:
-                profile_label = profile
-                if profile_label == 'default':
-                    profile_label = profile.capitalize()
-                item = Gtk.RadioMenuItem(profile_label, group)
-                if profile == current:
-                    item.set_active(True)
-                item.connect('activate', terminal.force_set_profile, profile)
-                submenu.append(item)
+                lbl = profile.capitalize() if profile == 'default' else profile
+                aname = unique('profile')
+                p = profile
+                action(aname, lambda p=p: terminal.force_set_profile(None, p))
+                profiles_menu.append(lbl, f'menu.{aname}')
+            sec = Gio.Menu()
+            sec.append_submenu(_('Profiles'), profiles_menu)
+            menu.append_section(None, sec)
 
-        self.add_layout_launcher(menu)
+        # ── Layouts submenu ────────────────────────────────────────────────
+        layouts = self.config.list_layouts()
+        if layouts:
+            layouts_menu = Gio.Menu()
+            for layout in layouts:
+                aname = unique('layout')
+                l = layout
+                action(aname, lambda l=l: spawn_new_terminator(
+                    self.terminator.origcwd, ['-u', '-l', l]))
+                layouts_menu.append(layout, f'menu.{aname}')
+            sec = Gio.Menu()
+            sec.append_submenu(_('Layouts...'), layouts_menu)
+            menu.append_section(None, sec)
 
+        # ── Plugin items ───────────────────────────────────────────────────
         try:
             menuitems = []
             registry = plugin.PluginRegistry()
             registry.load_plugins()
-            plugins = registry.get_plugins_by_capability('terminal_menu')
-            for menuplugin in plugins:
-                menuplugin.callback(menuitems, menu, terminal)
-            
-            if len(menuitems) > 0:
-                menu.append(Gtk.SeparatorMenuItem())
-
-            for menuitem in menuitems:
-                menu.append(menuitem)
+            for menuplugin in registry.get_plugins_by_capability('terminal_menu'):
+                menuplugin.callback(menuitems, None, terminal)
+            if menuitems:
+                sec = Gio.Menu()
+                self._add_plugin_items_to_menu(sec, menuitems, action, unique)
+                menu.append_section(None, sec)
         except Exception as ex:
             err('TerminalPopupMenu::show: %s' % ex)
 
-        menu.show_all()
-        menu.popup_at_pointer(None)
+        # ── Build and show ─────────────────────────────────────────────────
+        # Use sliding (not nested) so submenus open as separate panels instead
+        # of expanding inline, which would make the menu taller than the screen.
+        popover = Gtk.PopoverMenu.new_from_model_full(menu, Gtk.PopoverMenuFlags(0))
+        popover.set_parent(parent_widget)
+        popover.set_has_arrow(False)
+        popover.insert_action_group('menu', ag)
 
-        return(True)
+        rect = Gdk.Rectangle()
+        rect.x = int(x)
+        rect.y = int(y)
+        rect.width = 1
+        rect.height = 1
+        popover.set_pointing_to(rect)
+
+        popover.popup()
+        return popover
+
+    def _add_plugin_items_to_menu(self, gmenu, items, action_fn, unique_fn):
+        """Recursively convert plugin menu items into Gio.Menu entries."""
+        for item in items:
+            if item is None:
+                continue
+            if not isinstance(item, tuple) or len(item) < 2:
+                continue
+            first, second = item[0], item[1]
+            if first == 'check':
+                label, is_active, cb = item[1], item[2], item[3]
+                aname = unique_fn('plugin')
+                prefix = '✓ ' if is_active else '   '
+                action_fn(aname, lambda f=cb, a=is_active: f(None, not a))
+                gmenu.append(prefix + label, f'menu.{aname}')
+            elif isinstance(second, list):
+                sub = Gio.Menu()
+                self._add_plugin_items_to_menu(sub, second, action_fn, unique_fn)
+                gmenu.append_submenu(first, sub)
+            else:
+                extra = item[2:] if len(item) > 2 else ()
+                aname = unique_fn('plugin')
+                action_fn(aname, lambda f=second, fa=extra: f(None, *fa))
+                gmenu.append(first, f'menu.{aname}')
 
     def pick_custom_colors(self, terminal):
-        """Open a dialog to choose background and foreground colors at once"""
+        """Open a dialog to choose background and foreground colors."""
         dialog = Gtk.Dialog(title=_('Pick Terminal Colors'),
-                            transient_for=terminal.get_toplevel(),
-                            flags=Gtk.DialogFlags.MODAL)
+                            transient_for=terminal.get_root(),
+                            modal=True)
         dialog.add_button(_('Cancel'), Gtk.ResponseType.CANCEL)
         dialog.add_button(_('Apply'), Gtk.ResponseType.OK)
 
         content = dialog.get_content_area()
         content.set_spacing(8)
-        content.set_border_width(12)
 
         grid = Gtk.Grid()
         grid.set_column_spacing(12)
         grid.set_row_spacing(8)
+        grid.set_margin_top(12)
+        grid.set_margin_bottom(12)
+        grid.set_margin_start(12)
+        grid.set_margin_end(12)
 
-        bg_label = Gtk.Label(label=_('Background:'), xalign=0)
+        bg_label = Gtk.Label(label=_('Background:'))
+        bg_label.set_halign(Gtk.Align.START)
         bg_btn = Gtk.ColorButton()
         bg_btn.set_use_alpha(True)
         if terminal.bgcolor is not None:
             bg_btn.set_rgba(terminal.bgcolor.copy())
 
-        fg_label = Gtk.Label(label=_('Text:'), xalign=0)
+        fg_label = Gtk.Label(label=_('Text:'))
+        fg_label.set_halign(Gtk.Align.START)
         fg_btn = Gtk.ColorButton()
         if terminal.fgcolor_active is not None:
             fg_initial = terminal.fgcolor_active.copy()
@@ -393,33 +295,25 @@ class TerminalPopupMenu(object):
         grid.attach(bg_btn, 1, 0, 1, 1)
         grid.attach(fg_label, 0, 1, 1, 1)
         grid.attach(fg_btn, 1, 1, 1, 1)
-        content.add(grid)
-        dialog.show_all()
+        content.append(grid)
 
-        response = dialog.run()
-        if response == Gtk.ResponseType.OK:
+        result = [Gtk.ResponseType.CANCEL]
+        loop = GLib.MainLoop()
+
+        def on_response(d, r):
+            result[0] = r
+            d.destroy()
+            loop.quit()
+        dialog.connect('response', on_response)
+        dialog.present()
+        loop.run()
+
+        if result[0] == Gtk.ResponseType.OK:
             bg_rgba = bg_btn.get_rgba()
             fg_rgba = fg_btn.get_rgba()
-            bg_hex = "#{0:02x}{1:02x}{2:02x}".format(
-                int(bg_rgba.red * 255),
-                int(bg_rgba.green * 255),
-                int(bg_rgba.blue * 255))
-            fg_hex = "#{0:02x}{1:02x}{2:02x}".format(
-                int(fg_rgba.red * 255),
-                int(fg_rgba.green * 255),
-                int(fg_rgba.blue * 255))
+            bg_hex = '#{:02x}{:02x}{:02x}'.format(
+                int(bg_rgba.red * 255), int(bg_rgba.green * 255), int(bg_rgba.blue * 255))
+            fg_hex = '#{:02x}{:02x}{:02x}'.format(
+                int(fg_rgba.red * 255), int(fg_rgba.green * 255), int(fg_rgba.blue * 255))
             terminal.set_bgcolor(bg_hex, alpha=bg_rgba.alpha)
             terminal.set_fgcolor(fg_hex)
-        dialog.destroy()
-
-    def add_layout_launcher(self, menu):
-        """Add the layout list to the menu"""
-        item = self.menu_item(Gtk.MenuItem, 'layout_launcher', _('_Layouts...'))
-        menu.append(item)
-        submenu = Gtk.Menu()
-        item.set_submenu(submenu)
-        layouts = self.config.list_layouts()
-        for layout in layouts:
-                item = Gtk.MenuItem(layout)
-                item.connect('activate', lambda x: spawn_new_terminator(self.terminator.origcwd, ['-u', '-l', x.get_label()]))
-                submenu.append(item)

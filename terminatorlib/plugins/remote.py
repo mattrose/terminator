@@ -68,7 +68,7 @@ from typing import Optional, List
 
 import gi
 from gi.repository import Gtk, GLib
-gi.require_version('Vte', '2.91')
+gi.require_version('Vte', '3.91')
 from gi.repository import Vte
 
 from terminatorlib.plugin import MenuItem
@@ -539,68 +539,19 @@ class Remote(MenuItem):
         child, remote_session = ret
         dbg(f"Found remote session {child}")
 
-        def get_image_menuitem(title, horiz):
-            item = Gtk.ImageMenuItem.new_with_mnemonic(title)
-            image = Gtk.Image()
-            image.set_from_icon_name(
-                "{}_{}".format(APP_NAME, "horiz" if horiz else "vert"),
-                Gtk.IconSize.MENU
-            )
-            item.set_image(image)
-            if hasattr(item, 'set_always_show_image'):
-                item.set_always_show_image(True)
-            return item
-
-        # if we have split-auto signal
         if APP_VERSION >= '2.1.3':
-            item = Gtk.MenuItem.new_with_mnemonic(_('Clone Auto'))
-            item.connect(
-                'activate',
-                self._menu_item_activated,
-                ('split-auto', terminal)
-            )
-            menuitems.append(item)
+            menuitems.append((_('Clone Auto'), self._menu_item_activated, ('split-auto', terminal)))
 
-        # normal split buttons
-        item = get_image_menuitem(_('Clone Horizontally'), horiz=True)
-        item.connect(
-            'activate',
-            self._menu_item_activated,
-            ('split-horiz', terminal)
-        )
-        menuitems.append(item)
-
-        item = get_image_menuitem(_('Clone Vertically'), horiz=False)
-        item.connect(
-            'activate',
-            self._menu_item_activated,
-            ('split-vert', terminal)
-        )
-        menuitems.append(item)
-
-        # add option to clone on split
-        item = Gtk.CheckMenuItem(_('Clone On Split'))
-        item.set_active(self.config['auto_clone'])
-        item.connect(
-            'toggled',
-            self._on_clone_on_split,
-            None
-        )
-        menuitems.append(item)
-
-        # find the split items and add our clone handlers when they finish
-        if self.config['auto_clone']:
-            self.peers = self._get_all_terminals()
-            for child in menu.get_children():
-                if 'split' in child.get_name():
-                    dbg(f"handling split on menu item '{child.get_name()}'")
-                    child.connect_after(
-                        'activate', self._split_axis, terminal
-                    )
+        menuitems.append((_('Clone Horizontally'), self._menu_item_activated, ('split-horiz', terminal)))
+        menuitems.append((_('Clone Vertically'), self._menu_item_activated, ('split-vert', terminal)))
+        menuitems.append(('check', _('Clone On Split'), self.config['auto_clone'], self._on_clone_on_split))
 
     def _on_clone_on_split(self, widget, data):
-        """ handle check text box """
-        self.config['auto_clone'] = widget.get_active()
+        """ handle clone-on-split toggle """
+        if isinstance(data, bool):
+            self.config['auto_clone'] = data
+        elif widget is not None:
+            self.config['auto_clone'] = widget.get_active()
 
     def _poll_new_terminals(self, start_time):
         """

@@ -8,7 +8,7 @@ import signal
 import time
 import gi
 from gi.repository import GLib, GObject, Pango, Gtk, Gdk, GdkPixbuf, cairo
-gi.require_version('Vte', '2.91')  # vte-0.38 (gnome-3.14)
+gi.require_version('Vte', '3.91')  # vte-0.38 (gnome-3.14)
 from gi.repository import Vte
 import subprocess
 try:
@@ -33,7 +33,7 @@ from terminatorlib.layoutlauncher import LayoutLauncher
 from . import regex
 
 # pylint: disable-msg=R0904
-class Terminal(Gtk.VBox):
+class Terminal(Gtk.Box):
     """Class implementing the VTE widget and its wrappings"""
 
     __gsignals__ = {
@@ -125,6 +125,7 @@ class Terminal(Gtk.VBox):
     def __init__(self):
         """Class initialiser"""
         GObject.GObject.__init__(self)
+        self.set_orientation(Gtk.Orientation.VERTICAL)
 
         self.terminator = Terminator()
         self.terminator.register_terminal(self)
@@ -142,7 +143,7 @@ class Terminal(Gtk.VBox):
 
         self.cwd = get_pid_cwd()
         self.origcwd = self.terminator.origcwd
-        self.clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
+        self.clipboard = Gdk.Display.get_default().get_clipboard()
 
         self.pending_on_vte_size_allocate = False
 
@@ -159,8 +160,6 @@ class Terminal(Gtk.VBox):
         if hasattr(self.vte, "set_enable_sixel"):
             self.vte.set_enable_sixel(True)
 
-        self.vte.show()
-
         #force to load for new window/terminal use case loading plugin
         #and connecting signals, note the line update_url_matches also
         #calls load_plugins, but it won't reload since already loaded
@@ -170,6 +169,8 @@ class Terminal(Gtk.VBox):
         self.update_url_matches()
 
         self.terminalbox = self.create_terminalbox()
+        self._context_popover = None
+        self._pending_menu = None
 
         self.titlebar = Titlebar(self)
         self.titlebar.connect_icon(self.on_group_button_press)
@@ -177,20 +178,20 @@ class Terminal(Gtk.VBox):
         self.connect('title-change', self.titlebar.set_terminal_title)
         self.titlebar.connect('create-group', self.really_create_group)
         self.titlebar.update('window-focus-out')
-        self.titlebar.show_all()
 
         self.searchbar = Searchbar()
         self.searchbar.connect('end-search', self.on_search_done)
 
-        self.show()
         if self.config['title_at_bottom']:
-            self.pack_start(self.terminalbox, True, True, 0)
-            self.pack_start(self.titlebar, False, True, 0)
+            self.terminalbox.set_vexpand(True)
+            self.append(self.terminalbox)
+            self.append(self.titlebar)
         else:
-            self.pack_start(self.titlebar, False, True, 0)
-            self.pack_start(self.terminalbox, True, True, 0)
+            self.append(self.titlebar)
+            self.terminalbox.set_vexpand(True)
+            self.append(self.terminalbox)
 
-        self.pack_end(self.searchbar, True, True, 0)
+        self.append(self.searchbar)
 
         self.connect_signals()
 
@@ -204,16 +205,14 @@ class Terminal(Gtk.VBox):
         self.reconfigure()
         self.vte.set_size(80, 24)
 
-    def set_background_image(self,image):
-        try: 
-            bg_pixbuf = GdkPixbuf.Pixbuf.new_from_file(image)
-            self.background_image = Gdk.cairo_surface_create_from_pixbuf(bg_pixbuf, 1, None)
-            self.vte.set_clear_background(False)
-            self.vte.connect("draw", self.background_draw)
+    def set_background_image(self, image):
+        # GTK4: cairo draw signal removed; background image rendering not supported
+        try:
+            self.background_image = image  # store path for reference
+            self.vte.set_clear_background(True)
         except Exception as e:
             self.background_image = None
-            self.vte.set_clear_background(True)
-            err('error loading background image: %s, %s' % (type(e).__name__,e))
+            err('error loading background image: %s, %s' % (type(e).__name__, e))
 
     def get_vte(self):
         """This simply returns the vte widget we are using"""
@@ -330,17 +329,17 @@ class Terminal(Gtk.VBox):
             time.sleep(poll_interval)
 
     def create_terminalbox(self):
-        """Create a GtkHBox containing the terminal and a scrollbar"""
-
+        """Create a GtkBox containing the terminal and a scrollbar"""
         terminalbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
-        self.scrollbar = Gtk.Scrollbar.new(Gtk.Orientation.VERTICAL, adjustment=self.vte.get_vadjustment())
-        self.scrollbar.set_no_show_all(True)
+        self.scrollbar = Gtk.Scrollbar.new(Gtk.Orientation.VERTICAL,
+                                           adjustment=self.vte.get_vadjustment())
 
-        terminalbox.pack_start(self.vte, True, True, 0)
-        terminalbox.pack_start(self.scrollbar, False, True, 0)
-        terminalbox.show_all()
+        self.vte.set_hexpand(True)
+        self.vte.set_vexpand(True)
+        terminalbox.append(self.vte)
+        terminalbox.append(self.scrollbar)
 
-        return(terminalbox)
+        return terminalbox
 
     def load_plugins(self, force = False):
         registry = plugin.PluginRegistry()
@@ -454,63 +453,50 @@ class Terminal(Gtk.VBox):
             self.vte.copy_clipboard()
 
     def connect_signals(self):
-        """Connect all the gtk signals and drag-n-drop mechanics"""
+        """Connect all gtk signals and event controllers"""
 
-        self.scrollbar.connect('button-press-event', self.on_buttonpress)
+        # Key events on VTE
+        key_ctrl = Gtk.EventControllerKey()
+        key_ctrl.connect('key-pressed', self.on_keypress)
+        self.vte.add_controller(key_ctrl)
+        self._vte_key_ctrl = key_ctrl
 
-        self.cnxids.new(self.vte, 'key-press-event', self.on_keypress)
-        self.cnxids.new(self.vte, 'button-press-event', self.on_buttonpress)
-        self.cnxids.new(self.vte, 'scroll-event', self.on_mousewheel)
-        self.cnxids.new(self.vte, 'popup-menu', self.popup_menu)
+        # Button/click events on VTE — CAPTURE phase so we run before VTE's
+        # own internal GestureClick handlers and can reliably claim the sequence.
+        click_ctrl = Gtk.GestureClick()
+        click_ctrl.set_button(0)  # all buttons
+        click_ctrl.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
+        click_ctrl.connect('pressed', self.on_buttonpress)
+        click_ctrl.connect('released', self.on_buttonrelease)
+        self.vte.add_controller(click_ctrl)
+        self._vte_click_ctrl = click_ctrl
 
-        srcvtetargets = [("vte", Gtk.TargetFlags.SAME_APP, self.TARGET_TYPE_VTE)]
-        dsttargets = [("vte", Gtk.TargetFlags.SAME_APP, self.TARGET_TYPE_VTE),
-                      ('text/x-moz-url', 0, self.TARGET_TYPE_MOZ),
-                      ('_NETSCAPE_URL', 0, 0)]
-        '''
-        The following should work, but on my system it corrupts the returned
-        TargetEntry's in the newdstargets with binary crap, causing "Segmentation
-        fault (core dumped)" when the later drag_dest_set gets called.
-        
-        dsttargetlist = Gtk.TargetList.new([])
-        dsttargetlist.add_text_targets(0)
-        dsttargetlist.add_uri_targets(0)
-        dsttargetlist.add_table(dsttargets)
-        
-        newdsttargets = Gtk.target_table_new_from_list(dsttargetlist)
-        '''
-        # FIXME: Temporary workaround for the problems with the correct way of doing things
-        dsttargets.extend([('text/plain', 0, 0),
-                           ('text/plain;charset=utf-8', 0, 0),
-                           ('TEXT', 0, 0),
-                           ('STRING', 0, 0),
-                           ('UTF8_STRING', 0, 0),
-                           ('COMPOUND_TEXT', 0, 0),
-                           ('text/uri-list', 0, 0)])
-        # Convert to target entries
-        srcvtetargets = [Gtk.TargetEntry.new(*tgt) for tgt in srcvtetargets]
-        dsttargets = [Gtk.TargetEntry.new(*tgt) for tgt in dsttargets]
+        # Button events on scrollbar
+        sb_click = Gtk.GestureClick()
+        sb_click.set_button(0)
+        sb_click.connect('pressed', self.on_scrollbar_press)
+        self.scrollbar.add_controller(sb_click)
 
-        dbg('Finalised drag targets: %s' % dsttargets)
+        # Scroll/mousewheel events on VTE
+        scroll_ctrl = Gtk.EventControllerScroll.new(
+            Gtk.EventControllerScrollFlags.BOTH_AXES |
+            Gtk.EventControllerScrollFlags.DISCRETE)
+        scroll_ctrl.connect('scroll', self.on_mousewheel)
+        self.vte.add_controller(scroll_ctrl)
+        self._vte_scroll_ctrl = scroll_ctrl
 
-        for (widget, mask) in [
-            (self.vte, Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.BUTTON3_MASK),
-            (self.titlebar, Gdk.ModifierType.BUTTON1_MASK)]:
-            widget.drag_source_set(mask, srcvtetargets, Gdk.DragAction.MOVE)
+        # Focus events on VTE
+        focus_ctrl = Gtk.EventControllerFocus()
+        focus_ctrl.connect('enter', self.on_vte_focus_in)
+        focus_ctrl.connect('leave', self.on_vte_focus_out)
+        self.vte.add_controller(focus_ctrl)
 
-        self.vte.drag_dest_set(Gtk.DestDefaults.MOTION |
-                Gtk.DestDefaults.HIGHLIGHT | Gtk.DestDefaults.DROP,
-                dsttargets, Gdk.DragAction.COPY | Gdk.DragAction.MOVE)
+        # Mouse enter event on VTE
+        motion_ctrl = Gtk.EventControllerMotion()
+        motion_ctrl.connect('enter', self.on_vte_notify_enter)
+        self.vte.add_controller(motion_ctrl)
 
-        for widget in [self.vte, self.titlebar]:
-            self.cnxids.new(widget, 'drag-begin', self.on_drag_begin, self)
-            self.cnxids.new(widget, 'drag-data-get', self.on_drag_data_get,
-            self)
-
-        self.cnxids.new(self.vte, 'drag-motion', self.on_drag_motion, self)
-        self.cnxids.new(self.vte, 'drag-data-received',
-            self.on_drag_data_received, self)
-
+        # VTE signals that still work in GTK4
         self.cnxids.new(self.vte, 'selection-changed',
             lambda widget: self.maybe_copy_clipboard())
 
@@ -519,148 +505,152 @@ class Terminal(Gtk.VBox):
 
         self.cnxids.new(self.vte, 'window-title-changed', lambda x:
             self.emit('title-change', self.get_window_title()))
-        self.cnxids.new(self.vte, 'grab-focus', self.on_vte_focus)
-        self.cnxids.new(self.vte, 'focus-in-event', self.on_vte_focus_in)
-        self.cnxids.new(self.vte, 'focus-out-event', self.on_vte_focus_out)
-        self.cnxids.new(self.vte, 'size-allocate', self.deferred_on_vte_size_allocate)
-
-        self.vte.add_events(Gdk.EventMask.ENTER_NOTIFY_MASK)
-        self.cnxids.new(self.vte, 'enter_notify_event',
-            self.on_vte_notify_enter)
+        self.cnxids.new(self.vte, 'notify::width', self.deferred_on_vte_size_allocate)
 
         self.cnxids.new(self.vte, 'realize', self.reconfigure)
 
-    def create_popup_group_menu(self, widget, event = None):
-        """Pop up a menu for the group widget"""
-        if event:
-            button = event.button
-            time = event.time
-        else:
-            button = 0
-            time = 0
+        # GTK4: DnD API completely changed; stub out for now
+        # TODO: Implement using Gtk.DragSource / Gtk.DropTarget
 
-        menu = self.populate_group_menu()
-        menu.show_all()
-        menu.popup_at_widget(widget,Gdk.Gravity.SOUTH_WEST,Gdk.Gravity.NORTH_WEST,None)
-        return(True)
+    def create_popup_group_menu(self, widget, gesture=None):
+        """Pop up a menu for the group widget using Gio.Menu + Gtk.PopoverMenu"""
+        from gi.repository import Gio
+        menu_model = Gio.Menu()
+        action_group = Gio.SimpleActionGroup()
 
-    def populate_group_menu(self):
-        """Fill out a group menu"""
-        menu = Gtk.Menu()
-        self.group_menu = menu
-        groupitems = []
+        # New group action
+        act = Gio.SimpleAction.new('new-group', None)
+        act.connect('activate', lambda a, p: self.create_group(None))
+        action_group.add_action(act)
+        menu_model.append(_('New group...'), 'grp.new-group')
 
-        item = Gtk.MenuItem.new_with_mnemonic(_('N_ew group...'))
-        item.connect('activate', self.create_group)
-        menu.append(item)
-
+        # Group selection section
         if len(self.terminator.groups) > 0:
-            cnxs = []
-            item = Gtk.RadioMenuItem.new_with_mnemonic(groupitems, _('_None'))
-            groupitems = item.get_group()
-            item.set_active(self.group == None)
-            cnxs.append([item, 'toggled', self.set_group, None])
-            menu.append(item)
+            grp_section = Gio.Menu()
+
+            none_act = Gio.SimpleAction.new_stateful(
+                'set-group-none', None, GLib.Variant.new_boolean(self.group is None))
+            none_act.connect('activate', lambda a, p: self.set_group(None, None))
+            action_group.add_action(none_act)
+            grp_section.append(_('None'), 'grp.set-group-none')
 
             for group in self.terminator.groups:
-                item = Gtk.RadioMenuItem.new_with_label(groupitems, group)
-                groupitems = item.get_group()
-                item.set_active(self.group == group)
-                cnxs.append([item, 'toggled', self.set_group, group])
-                menu.append(item)
+                safe = group.replace(' ', '-').replace('.', '-')
+                act = Gio.SimpleAction.new_stateful(
+                    'set-group-%s' % safe, None,
+                    GLib.Variant.new_boolean(self.group == group))
+                act.connect('activate', lambda a, p, g=group: self.set_group(None, g))
+                action_group.add_action(act)
+                grp_section.append(group, 'grp.set-group-%s' % safe)
 
-            for cnx in cnxs:
-                cnx[0].connect(cnx[1], cnx[2], cnx[3])
+            menu_model.append_section(None, grp_section)
 
-        if self.group != None or len(self.terminator.groups) > 0:
-            menu.append(Gtk.SeparatorMenuItem())
-
-        if self.group != None:
-            item = Gtk.MenuItem(_('Remove group %s') % self.group)
-            item.connect('activate', self.ungroup, self.group)
-            menu.append(item)
+        # Window/tab group actions
+        win_section = Gio.Menu()
+        if self.group is not None:
+            act = Gio.SimpleAction.new('remove-group', None)
+            act.connect('activate', lambda a, p: self.ungroup(None, self.group))
+            action_group.add_action(act)
+            win_section.append(_('Remove group %s') % self.group, 'grp.remove-group')
 
         if util.has_ancestor(self, Gtk.Window):
-            item = Gtk.MenuItem.new_with_mnemonic(_('G_roup all in window'))
-            item.connect('activate', lambda x: self.emit('group_win'))
-            menu.append(item)
-
+            act = Gio.SimpleAction.new('group-win', None)
+            act.connect('activate', lambda a, p: self.emit('group-win'))
+            action_group.add_action(act)
+            win_section.append(_('Group all in window'), 'grp.group-win')
             if len(self.terminator.groups) > 0:
-                item = Gtk.MenuItem.new_with_mnemonic(_('Ungro_up all in window'))
-                item.connect('activate', lambda x: self.emit('ungroup_win'))
-                menu.append(item)
+                act = Gio.SimpleAction.new('ungroup-win', None)
+                act.connect('activate', lambda a, p: self.emit('ungroup-win'))
+                action_group.add_action(act)
+                win_section.append(_('Ungroup all in window'), 'grp.ungroup-win')
 
         if util.has_ancestor(self, Gtk.Notebook):
-            item = Gtk.MenuItem.new_with_mnemonic(_('G_roup all in tab'))
-            item.connect('activate', lambda x: self.emit('group_tab'))
-            menu.append(item)
-
+            act = Gio.SimpleAction.new('group-tab', None)
+            act.connect('activate', lambda a, p: self.emit('group-tab'))
+            action_group.add_action(act)
+            win_section.append(_('Group all in tab'), 'grp.group-tab')
             if len(self.terminator.groups) > 0:
-                item = Gtk.MenuItem.new_with_mnemonic(_('Ungro_up all in tab'))
-                item.connect('activate', lambda x: self.emit('ungroup_tab'))
-                menu.append(item)
+                act = Gio.SimpleAction.new('ungroup-tab', None)
+                act.connect('activate', lambda a, p: self.emit('ungroup-tab'))
+                action_group.add_action(act)
+                win_section.append(_('Ungroup all in tab'), 'grp.ungroup-tab')
 
         if len(self.terminator.groups) > 0:
-            item = Gtk.MenuItem(_('Remove all groups'))
-            item.connect('activate', lambda x: self.emit('ungroup-all'))
-            menu.append(item)
+            act = Gio.SimpleAction.new('remove-all-groups', None)
+            act.connect('activate', lambda a, p: self.emit('ungroup-all'))
+            action_group.add_action(act)
+            win_section.append(_('Remove all groups'), 'grp.remove-all-groups')
 
-        if self.group != None:
-            menu.append(Gtk.SeparatorMenuItem())
+        if self.group is not None:
+            act = Gio.SimpleAction.new('close-group', None)
+            act.connect('activate', lambda a, p:
+                        self.terminator.closegroupedterms(self.group))
+            action_group.add_action(act)
+            win_section.append(_('Close group %s') % self.group, 'grp.close-group')
 
-            item = Gtk.MenuItem(_('Close group %s') % self.group)
-            item.connect('activate', lambda x:
-                         self.terminator.closegroupedterms(self.group))
-            menu.append(item)
+        if win_section.get_n_items() > 0:
+            menu_model.append_section(None, win_section)
 
-        menu.append(Gtk.SeparatorMenuItem())
+        # Broadcast section
+        bcast_section = Gio.Menu()
+        for label, value in [(_('Broadcast all'), 'all'),
+                              (_('Broadcast group'), 'group'),
+                              (_('Broadcast off'), 'off')]:
+            safe = 'bcast-%s' % value
+            act = Gio.SimpleAction.new_stateful(
+                safe, None,
+                GLib.Variant.new_boolean(
+                    self.terminator.groupsend == self.terminator.groupsend_type[value]))
+            act.connect('activate', lambda a, p, v=value:
+                        self.set_groupsend(None, self.terminator.groupsend_type[v]))
+            action_group.add_action(act)
+            bcast_section.append(label, 'grp.%s' % safe)
+        menu_model.append_section(None, bcast_section)
 
-        groupitems = []
-        cnxs = []
+        # Settings section
+        settings_section = Gio.Menu()
+        stg_act = Gio.SimpleAction.new_stateful(
+            'split-to-group', None,
+            GLib.Variant.new_boolean(self.config['split_to_group']))
+        stg_act.connect('activate', lambda a, p: self.do_splittogroup_toggle())
+        action_group.add_action(stg_act)
+        settings_section.append(_('Split to this group'), 'grp.split-to-group')
 
-        for key, value in list({_('Broadcast _all'):'all',
-                          _('Broadcast _group'):'group',
-                          _('Broadcast _off'):'off'}.items()):
-            item = Gtk.RadioMenuItem.new_with_mnemonic(groupitems, key)
-            groupitems = item.get_group()
-            dbg('%s active: %s' %
-                    (key, self.terminator.groupsend ==
-                        self.terminator.groupsend_type[value]))
-            item.set_active(self.terminator.groupsend ==
-                    self.terminator.groupsend_type[value])
-            cnxs.append([item, 'activate', self.set_groupsend, self.terminator.groupsend_type[value]])
-            menu.append(item)
+        acg_act = Gio.SimpleAction.new_stateful(
+            'autoclean-groups', None,
+            GLib.Variant.new_boolean(self.config['autoclean_groups']))
+        acg_act.connect('activate', lambda a, p: self.do_autocleangroups_toggle())
+        action_group.add_action(acg_act)
+        settings_section.append(_('Autoclean groups'), 'grp.autoclean-groups')
+        menu_model.append_section(None, settings_section)
 
-        for cnx in cnxs:
-            cnx[0].connect(cnx[1], cnx[2], cnx[3])
+        # Insert section
+        ins_section = Gio.Menu()
+        for label, signal, arg in [
+            (_('Insert terminal number'), 'enumerate', False),
+            (_('Insert zero padded terminal number'), 'enumerate', True),
+            (_('Insert terminal name'), 'insert-term-name', None),
+        ]:
+            safe = label.replace(' ', '-').lower()
+            if arg is not None:
+                act = Gio.SimpleAction.new('ins-%s' % safe, None)
+                act.connect('activate', lambda a, p, s=signal, v=arg: self.emit(s, v))
+            else:
+                act = Gio.SimpleAction.new('ins-%s' % safe, None)
+                act.connect('activate', lambda a, p, s=signal: self.emit(s))
+            action_group.add_action(act)
+            ins_section.append(label, 'grp.ins-%s' % safe)
+        menu_model.append_section(None, ins_section)
 
-        menu.append(Gtk.SeparatorMenuItem())
+        popover = Gtk.PopoverMenu.new_from_model(menu_model)
+        popover.insert_action_group('grp', action_group)
+        popover.set_parent(widget)
+        popover.popup()
+        return True
 
-        item = Gtk.CheckMenuItem.new_with_mnemonic(_('_Split to this group'))
-        item.set_active(self.config['split_to_group'])
-        item.connect('toggled', lambda x: self.do_splittogroup_toggle())
-        menu.append(item)
-
-        item = Gtk.CheckMenuItem.new_with_mnemonic(_('Auto_clean groups'))
-        item.set_active(self.config['autoclean_groups'])
-        item.connect('toggled', lambda x: self.do_autocleangroups_toggle())
-        menu.append(item)
-
-        menu.append(Gtk.SeparatorMenuItem())
-
-        item = Gtk.MenuItem.new_with_mnemonic(_('_Insert terminal number'))
-        item.connect('activate', lambda x: self.emit('enumerate', False))
-        menu.append(item)
-
-        item = Gtk.MenuItem.new_with_mnemonic(_('Insert zero _padded terminal number'))
-        item.connect('activate', lambda x: self.emit('enumerate', True))
-        menu.append(item)
-
-        item = Gtk.MenuItem.new_with_mnemonic(_('Insert terminal _name'))
-        item.connect('activate', lambda x: self.emit('insert-term-name'))
-        menu.append(item)
-
-        return(menu)
+    def populate_group_menu(self):
+        """Stub - group menu now uses create_popup_group_menu"""
+        return None
 
     def set_group(self, _item, name):
         """Set a particular group"""
@@ -788,8 +778,12 @@ class Terminal(Gtk.VBox):
             self.vte.set_bold_is_bright(self.config['bold_is_bright'])
 
         if self.config['use_theme_colors']:
-            self.fgcolor_active = self.vte.get_style_context().get_color(Gtk.StateType.NORMAL)  # VERIFY FOR GTK3: do these really take the theme colors?
-            self.bgcolor = self.vte.get_style_context().get_background_color(Gtk.StateType.NORMAL)
+            # GTK4: get_color/get_background_color removed from StyleContext
+            # Fall back to configured colors when using theme colors
+            self.fgcolor_active = Gdk.RGBA()
+            self.fgcolor_active.parse(self.config['foreground_color'])
+            self.bgcolor = Gdk.RGBA()
+            self.bgcolor.parse(self.config['background_color'])
         else:
             self.fgcolor_active = Gdk.RGBA()
             self.fgcolor_active.parse(self.config['foreground_color'])
@@ -920,9 +914,9 @@ class Terminal(Gtk.VBox):
         else:
             self.scrollbar.show()
             if self.config['scrollbar_position'] == 'left':
-                self.terminalbox.reorder_child(self.scrollbar, 0)
+                self.terminalbox.reorder_child_after(self.scrollbar, None)
             elif self.config['scrollbar_position'] == 'right':
-                self.terminalbox.reorder_child(self.vte, 0)
+                self.terminalbox.reorder_child_after(self.vte, None)
 
         self.titlebar.update()
         self.vte.queue_draw()
@@ -1006,27 +1000,29 @@ class Terminal(Gtk.VBox):
         """Return the window title"""
         return self.vte.get_window_title() or str(self.command)
 
-    def on_group_button_press(self, widget, event):
+    def on_group_button_press(self, gesture, n_press, x, y):
         """Handler for the group button"""
-        if event.button == 1:
-            if event.type == Gdk.EventType._2BUTTON_PRESS or \
-               event.type == Gdk.EventType._3BUTTON_PRESS:
-                # Ignore these, or they make the interaction bad
+        button = gesture.get_current_button()
+        if button == 1:
+            if n_press > 1:
+                # Ignore double/triple clicks
                 return True
-            # Super key applies interaction to all terms in group
-            include_siblings=event.get_state() & Gdk.ModifierType.MOD4_MASK == Gdk.ModifierType.MOD4_MASK
+            event = gesture.get_last_event(gesture.get_last_updated_sequence())
+            state = event.get_modifier_state() if event else Gdk.ModifierType(0)
+
+            include_siblings = bool(state & Gdk.ModifierType.SUPER_MASK)
             if include_siblings:
-                targets=self.terminator.get_sibling_terms(self)
+                targets = self.terminator.get_sibling_terms(self)
             else:
-                targets=[self]
-            if event.get_state() & Gdk.ModifierType.CONTROL_MASK == Gdk.ModifierType.CONTROL_MASK:
+                targets = [self]
+
+            if state & Gdk.ModifierType.CONTROL_MASK:
                 dbg('on_group_button_press: toggle terminal to focused terminals group')
-                focused=self.get_toplevel().get_focussed_terminal()
-                if focused in targets: targets.remove(focused)
+                focused = self.get_root().get_focussed_terminal()
+                if focused in targets:
+                    targets.remove(focused)
                 if self != focused:
                     if focused.group is None and self.group is None:
-                        # Create a new group and assign currently focused
-                        # terminal to this group
                         new_group = self.terminator.new_random_group()
                         focused.set_group(None, new_group)
                         focused.titlebar.update()
@@ -1036,28 +1032,29 @@ class Terminal(Gtk.VBox):
                         new_group = focused.group
                     [term.set_group(None, new_group) for term in targets]
                     [term.titlebar.update(focused) for term in targets]
+                gesture.set_state(Gtk.EventSequenceState.CLAIMED)
                 return True
-            elif event.get_state() & Gdk.ModifierType.SHIFT_MASK == Gdk.ModifierType.SHIFT_MASK:
+            elif state & Gdk.ModifierType.SHIFT_MASK:
                 dbg('on_group_button_press: rename of terminals group')
                 self.targets_for_new_group = targets
                 self.titlebar.create_group()
-                return True
-            elif event.type == Gdk.EventType.BUTTON_PRESS:
-                # Single Click gives popup
-                dbg('on_group_button_press: group menu popup')
-                window = self.get_toplevel()
-                window.preventHide = True
-                self.create_popup_group_menu(widget, event)
+                gesture.set_state(Gtk.EventSequenceState.CLAIMED)
                 return True
             else:
-                dbg('on_group_button_press: unknown group button interaction')
+                # Single Click gives popup
+                dbg('on_group_button_press: group menu popup')
+                window = self.get_root()
+                window.preventHide = True
+                widget = gesture.get_widget()
+                self.create_popup_group_menu(widget, gesture)
+                gesture.set_state(Gtk.EventSequenceState.CLAIMED)
+                return True
         return False
 
-    def on_keypress(self, widget, event):
+    def on_keypress(self, ctrl, keyval, keycode, state):
         """Handler for keyboard events"""
-        if not event:
-            dbg('Called on %s with no event' % widget)
-            return False
+        from .keybindings import KeyEventProxy
+        event = KeyEventProxy(keyval, keycode, state)
 
         # FIXME: Does keybindings really want to live in Terminator()?
         mapping = self.terminator.keybindings.lookup(event)
@@ -1071,7 +1068,7 @@ class Terminal(Gtk.VBox):
             # handle the case where user has re-bound copy to ctrl+<key>
             # we only copy if there is a selection otherwise let it fall through
             # to ^<key>
-            if (mapping == "copy" and event.get_state() & Gdk.ModifierType.CONTROL_MASK):
+            if (mapping == "copy" and state & Gdk.ModifierType.CONTROL_MASK):
                 if self.vte.get_has_selection():
                     getattr(self, "key_" + mapping)()
                     return True
@@ -1085,8 +1082,8 @@ class Terminal(Gtk.VBox):
         #         maybe we can emit the key event and let Terminator() care?
         groupsend = self.terminator.groupsend
         groupsend_type = self.terminator.groupsend_type
-        toplevel = self.vte.get_toplevel()
-        window_focussed = isinstance(toplevel, Gtk.Window) and toplevel.get_property('has-toplevel-focus')
+        toplevel = self.vte.get_root()
+        window_focussed = isinstance(toplevel, Gtk.Window) and toplevel.get_property('is-active')
         if groupsend != groupsend_type['off'] and window_focussed and self.vte.is_focus():
             if self.group and groupsend == groupsend_type['group']:
                 self.terminator.group_emit(self, self.group, 'key-press-event',
@@ -1096,106 +1093,99 @@ class Terminal(Gtk.VBox):
 
         return False
 
-    def on_buttonpress(self, widget, event):
-        """Handler for mouse events"""
-        # Any button event should grab focus
+    def on_scrollbar_press(self, gesture, n_press, x, y):
+        """Handler for scrollbar button events"""
+        if n_press == 2:
+            # Suppress double-click behavior on scrollbar
+            gesture.set_state(Gtk.EventSequenceState.CLAIMED)
+        self.vte.grab_focus()
+
+    def on_buttonpress(self, gesture, n_press, x, y):
+        """Handler for mouse button press events"""
+        widget = gesture.get_widget()
         widget.grab_focus()
 
-        if type(widget) == Gtk.VScrollbar and event.type == Gdk.EventType._2BUTTON_PRESS:
-            # Suppress double-click behavior
+        button = gesture.get_current_button()
+        event = gesture.get_last_event(gesture.get_last_updated_sequence())
+        state = event.get_modifier_state() if event else Gdk.ModifierType(0)
+
+        if button == self.MOUSEBUTTON_LEFT:
+            if self.config["link_single_click"] or state & Gdk.ModifierType.CONTROL_MASK:
+                char_w = self.vte.get_char_width() or 1
+                char_h = self.vte.get_char_height() or 1
+                url = self.vte.match_check(int(x / char_w), int(y / char_h))
+                if url and url[0]:
+                    self.open_url(url, prepare=True)
+        elif button == self.MOUSEBUTTON_MIDDLE:
+            if not (state & Gdk.ModifierType.CONTROL_MASK):
+                paste_primary = not self.config['putty_paste_style_source_clipboard']
+                if self.config['putty_paste_style']:
+                    self.popup_menu(widget, x, y)
+                else:
+                    self.paste_clipboard(paste_primary, True)
+                gesture.set_state(Gtk.EventSequenceState.CLAIMED)
+                return True
+        elif button == self.MOUSEBUTTON_RIGHT:
+            if not (state & Gdk.ModifierType.CONTROL_MASK):
+                if self.config['putty_paste_style']:
+                    paste_primary = not self.config['putty_paste_style_source_clipboard']
+                    self.paste_clipboard(paste_primary, True)
+                else:
+                    self._pending_menu = (x, y)
+            gesture.set_state(Gtk.EventSequenceState.CLAIMED)
             return True
-
-        if self.config['putty_paste_style']:
-            middle_click = [self.popup_menu, (widget, event)]
-            right_click = [self.paste_clipboard, (not self.config['putty_paste_style_source_clipboard'], True)]
-        else:
-            middle_click = [self.paste_clipboard, (not self.config['putty_paste_style_source_clipboard'], True)]
-            right_click = [self.popup_menu, (widget, event)]
-
-        # Ctrl-click event here.
-        if event.button == self.MOUSEBUTTON_LEFT:
-            # Ctrl+leftclick on a URL should open it
-            if self.config["link_single_click"] or event.get_state() & Gdk.ModifierType.CONTROL_MASK == Gdk.ModifierType.CONTROL_MASK:
-                # Check new OSC-8 method first
-                url = self.vte.hyperlink_check_event(event)
-                dbg('url: %s' % url)
-                if url:
-                    self.open_url(url, prepare=False)
-                else:
-                    dbg('OSC-8 URL not detected dropping back to regex match')
-                    url = self.vte.match_check_event(event)
-                    if url[0]:
-                        self.open_url(url, prepare=True)
-                    else:
-                        dbg("No regex match, discard event.")
-        elif event.button == self.MOUSEBUTTON_MIDDLE:
-            # middleclick should paste the clipboard
-            # try to pass it to vte widget first though
-            if event.get_state() & Gdk.ModifierType.CONTROL_MASK == 0:
-                if event.get_state() & Gdk.ModifierType.SHIFT_MASK == 0:
-                    gtk_settings=Gtk.Settings().get_default()
-                    primary_state = gtk_settings.get_property('gtk-enable-primary-paste')
-                    gtk_settings.set_property('gtk-enable-primary-paste',  False)
-                    if not Vte.Terminal.do_button_press_event(self.vte, event):
-                        middle_click[0](*middle_click[1])
-                    gtk_settings.set_property('gtk-enable-primary-paste', primary_state)
-                else:
-                    middle_click[0](*middle_click[1])
-                return True
-            return Vte.Terminal.do_button_press_event(self.vte, event)
-        elif event.button == self.MOUSEBUTTON_RIGHT:
-            # rightclick should display a context menu if Ctrl is not pressed,
-            # plus either the app is not interested in mouse events or Shift is pressed
-            if event.get_state() & Gdk.ModifierType.CONTROL_MASK == 0:
-                if event.get_state() & Gdk.ModifierType.SHIFT_MASK == 0:
-                    if not Vte.Terminal.do_button_press_event(self.vte, event):
-                        right_click[0](*right_click[1])
-                else:
-                    right_click[0](*right_click[1])
-                return True
         return False
 
-    def on_mousewheel(self, widget, event):
-        """Handler for modifier + mouse wheel scroll events"""
-        SMOOTH_SCROLL_UP = event.direction == Gdk.ScrollDirection.SMOOTH and event.delta_y <= 0.
-        SMOOTH_SCROLL_DOWN = event.direction == Gdk.ScrollDirection.SMOOTH and event.delta_y > 0.
+    def on_buttonrelease(self, gesture, n_press, x, y):
+        """Show the deferred context menu on right-button release."""
+        if gesture.get_current_button() == self.MOUSEBUTTON_RIGHT:
+            coords = self._pending_menu
+            if coords is not None:
+                self._pending_menu = None
+                self.popup_menu(gesture.get_widget(), coords[0], coords[1])
 
-        modifiers = event.state & (Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.SHIFT_MASK)
+    def on_mousewheel(self, ctrl, dx, dy):
+        """Handler for modifier + mouse wheel scroll events"""
+        state = ctrl.get_current_event_state()
+        modifiers = state & (Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.SHIFT_MASK)
+
+        scroll_up = dy < 0 or dx < 0
+        scroll_down = dy > 0 or dx > 0
+
         if modifiers == Gdk.ModifierType.CONTROL_MASK:
-            # Zoom the terminal(s) in or out if not disabled in config
             if self.config["disable_mousewheel_zoom"] is True:
                 return False
-            # Choice of target terminals depends on Shift and Super modifiers
-            if event.state & Gdk.ModifierType.MOD4_MASK == Gdk.ModifierType.MOD4_MASK:
+            if state & Gdk.ModifierType.SUPER_MASK:
                 targets = self.terminator.terminals
-            elif event.state & Gdk.ModifierType.SHIFT_MASK == Gdk.ModifierType.SHIFT_MASK:
+            elif state & Gdk.ModifierType.SHIFT_MASK:
                 targets = self.terminator.get_target_terms(self)
             else:
                 targets = [self]
-            if event.direction == Gdk.ScrollDirection.UP or SMOOTH_SCROLL_UP:
+            if scroll_up:
                 for target in targets:
                     target.zoom_in()
                 return True
-            elif event.direction == Gdk.ScrollDirection.DOWN or SMOOTH_SCROLL_DOWN:
+            elif scroll_down:
                 for target in targets:
                     target.zoom_out()
                 return True
         elif modifiers == Gdk.ModifierType.SHIFT_MASK:
-            # Shift + mouse wheel up/down
-            if event.direction == Gdk.ScrollDirection.UP or SMOOTH_SCROLL_UP:
+            if scroll_up:
                 self.scroll_by_page(-1)
                 return True
-            elif event.direction == Gdk.ScrollDirection.DOWN or SMOOTH_SCROLL_DOWN:
+            elif scroll_down:
                 self.scroll_by_page(1)
                 return True
         return False
 
-    def popup_menu(self, widget, event=None):
-        """Display the context menu"""
-        window = self.get_toplevel()
-        window.preventHide = True
+    def popup_menu(self, widget, x=0, y=0):
+        """Display the context menu as a Popover attached to the VTE widget."""
+        existing = self._context_popover
+        if existing is not None:
+            self._context_popover = None
+            existing.popdown()
         menu = TerminalPopupMenu(self)
-        menu.show(widget, event)
+        self._context_popover = menu.show(self.vte, x, y)
 
     def do_readonly_toggle(self):
         self.vte.props.input_enabled = not self.vte.props.input_enabled
@@ -1212,184 +1202,37 @@ class Terminal(Gtk.VBox):
             widget.show()
 
     def on_drag_begin(self, widget, drag_context, _data):
-        """Handle the start of a drag event"""
-        Gtk.drag_set_icon_pixbuf(drag_context, util.widget_pixbuf(self, 512), 0, 0)
+        """Handle the start of a drag event (GTK4: stub)"""
+        pass
 
-    def on_drag_data_get(self, _widget, _drag_context, selection_data, info,
-                         _time, data):
-        """I have no idea what this does, drag and drop is a mystery. sorry."""
-        selection_data.set(Gdk.atom_intern('vte', False), info,
-                           bytes(str(data.terminator.terminals.index(self)),
-                                 'utf-8'))
+    def on_drag_data_get(self, _widget, _drag_context, selection_data, info, _time, data):
+        """Handle drag data request (GTK4: stub)"""
+        pass
 
     def on_drag_motion(self, widget, drag_context, x, y, _time, _data):
-        """*shrug*"""
-        if not drag_context.list_targets() == [Gdk.atom_intern('vte', False)] and \
-           (Gtk.targets_include_text(drag_context.list_targets()) or
-           Gtk.targets_include_uri(drag_context.list_targets())):
-            # copy text from another widget
-            return
-        srcwidget = Gtk.drag_get_source_widget(drag_context)
-        if(isinstance(srcwidget, Gtk.EventBox) and
-           srcwidget == self.titlebar) or widget == srcwidget:
-            # on self
-            return
-
-        alloc = widget.get_allocation()
-
-        if self.config['use_theme_colors']:
-            color = self.vte.get_style_context().get_color(Gtk.StateType.NORMAL)  # VERIFY FOR GTK3 as above
-        else:
-            color = Gdk.RGBA()
-            color.parse(self.config['foreground_color'])  # VERIFY FOR GTK3
-
-        pos = self.get_location(widget, x, y)
-        topleft = (0, 0)
-        topright = (alloc.width, 0)
-        topmiddle = (alloc.width/2, 0)
-        bottomleft = (0, alloc.height)
-        bottomright = (alloc.width, alloc.height)
-        bottommiddle = (alloc.width/2, alloc.height)
-        middleleft = (0, alloc.height/2)
-        middleright = (alloc.width, alloc.height/2)
-
-        coord = ()
-        if pos == "right":
-            coord = (topright, topmiddle, bottommiddle, bottomright)
-        elif pos == "top":
-            coord = (topleft, topright, middleright , middleleft)
-        elif pos == "left":
-            coord = (topleft, topmiddle, bottommiddle, bottomleft)
-        elif pos == "bottom":
-            coord = (bottomleft, bottomright, middleright , middleleft)
-
-        # here, we define some widget internal values
-        widget._draw_data = { 'color': color, 'coord' : coord }
-        # redraw by forcing an event
-        connec = widget.connect_after('draw', self.on_draw)
-        widget.queue_draw_area(0, 0, alloc.width, alloc.height)
-        widget.get_window().process_updates(True)
-        # finally reset the values
-        widget.disconnect(connec)
-        widget._draw_data = None
+        """Handle drag motion (GTK4: stub)"""
+        pass
 
     def background_draw(self, widget, cr):
-        if self.background_image is None:
-            return False
-
-        # save cairo context
-        cr.save()
-
-        # draw background image
-        image_mode = self.config['background_image_mode']
-        image_align_horiz = self.config['background_image_align_horiz']
-        image_align_vert = self.config['background_image_align_vert']
-
-        rect = self.vte.get_allocation()
-        xratio = float(rect.width) / float(self.background_image.get_width())
-        yratio = float(rect.height) / float(self.background_image.get_height())
-        if image_mode == 'stretch_and_fill':
-            # keep stretched ratios
-            xratio = xratio
-            yratio = yratio
-        elif image_mode == 'scale_and_fit':
-            ratio = min(xratio, yratio)
-            xratio = yratio = ratio
-        elif image_mode == 'scale_and_crop':
-            ratio = max(xratio, yratio)
-            xratio = yratio = ratio
-        else:
-            xratio = yratio = 1
-        cr.scale(xratio, yratio)
-
-        xoffset = 0
-        yoffset = 0
-        if image_align_horiz == 'center':
-            xoffset = (rect.width / xratio - self.background_image.get_width()) / 2
-        elif image_align_horiz == 'right':
-            xoffset = rect.width / xratio - self.background_image.get_width()
-
-        if image_align_vert == 'middle':
-            yoffset = (rect.height / yratio - self.background_image.get_height()) / 2
-        elif image_align_vert == 'bottom':
-            yoffset = rect.height / yratio - self.background_image.get_height()
-
-        cr.set_source_surface(self.background_image, xoffset, yoffset)
-        cr.get_source().set_filter(cairo.Filter.FAST)
-        if image_mode == 'tiling':
-            cr.get_source().set_extend(cairo.Extend.REPEAT)
-
-        cr.paint()
-
-        # draw transparent monochrome layer
-        Gdk.cairo_set_source_rgba(cr, self.bgcolor)
-        cr.paint()
-
-        # restore cairo context
-        cr.restore()
+        """Background image drawing (GTK4: stub - draw signal replaced by snapshot)"""
+        pass
 
     def on_draw(self, widget, context):
-        if not widget._draw_data:
-            return False
-
-        color = widget._draw_data['color']
-        coord = widget._draw_data['coord']
-
-        context.set_source_rgba(color.red, color.green, color.blue, 0.5)
-        if len(coord) > 0:
-            context.move_to(coord[len(coord)-1][0], coord[len(coord)-1][1])
-            for i in coord:
-                context.line_to(i[0], i[1])
-
-        context.fill()
+        """Drawing callback (GTK4: stub - draw signal replaced by snapshot)"""
         return False
 
     def on_drag_data_received(self, widget, drag_context, x, y, selection_data,
             info, _time, data):
-        """Something has been dragged into the terminal. Handle it as either a
-        URL or another terminal."""
-        # FIXME this code is a mess that I don't quite understand how it works.
+        """Handle drag data received (GTK4: stub)"""
+        pass
+
+    def _on_drag_data_received_impl(self, widget, drag_context, x, y, selection_data,
+            info, _time, data):
+        """Something has been dragged into the terminal (GTK3 implementation stub)."""
         dbg('drag data received of type: %s' % (selection_data.get_data_type()))
-        # print(selection_data.get_urls())
-        if Gtk.targets_include_text(drag_context.list_targets()) or \
-           Gtk.targets_include_uri(drag_context.list_targets()):
-            # copy text with no modification yet to destination
-            txt = selection_data.get_data()
-            # https://bugs.launchpad.net/terminator/+bug/1518705
-            if info == self.TARGET_TYPE_MOZ:
-                 txt = txt.decode('utf-16')
-                 # KDE ends it's text/x-moz-url text with CRLF, :shrug:
-                 if not txt.endswith('\r\n'):
-                   txt = txt.split('\n')[0]
-            else:
-                 txt = txt.decode()
-
-            txt_lines = txt.split( "\r\n" )
-            if txt_lines[-1] == '':
-                for line in txt_lines[:-1]:
-                    if line[0:7] != 'file://':
-                        txt = txt.replace('\r\n','\n')
-                        break
-                else:
-                    # It is a list of crlf terminated file:// URL. let's
-                    # iterate over all elements except the last one.
-                    str=''
-                    for fname in txt_lines[:-1]:
-                        fname = "'%s'" % urlunquote(fname[7:].replace("'",
-                                                                      '\'\\\'\''))
-                        str += fname + ' '
-                    txt = str
-            # Never send a CRLF to the terminal from here
-            txt = txt.rstrip('\r\n')
-            for term in self.terminator.get_target_terms(self):
-                term.feed(txt)
-            return
-
         widgetsrc = data.terminator.terminals[int(selection_data.get_data())]
-        srcvte = Gtk.drag_get_source_widget(drag_context)
-        # check if computation requireds
-        if (isinstance(srcvte, Gtk.EventBox) and
-                srcvte == self.titlebar) or srcvte == widget:
+        srcvte = None
+        if srcvte == widget:
             return
 
         srchbox = widgetsrc
@@ -1453,11 +1296,10 @@ class Terminal(Gtk.VBox):
 
     def ensure_visible_and_focussed(self):
         """Make sure that we're visible and focused"""
-        window = self.get_toplevel()
-        try:
-            topchild = window.get_children()[0]
-        except IndexError:
-            dbg('unable to get top child')    
+        window = self.get_root()
+        topchild = window.get_child()
+        if not topchild:
+            dbg('unable to get top child')
             return
         maker = Factory()
 
@@ -1475,23 +1317,23 @@ class Terminal(Gtk.VBox):
         """Update our UI when we get focus"""
         self.emit('title-change', self.get_window_title())
 
-    def on_vte_focus_in(self, _widget, _event):
+    def on_vte_focus_in(self, ctrl):
         """Inform other parts of the application when focus is received"""
         self.vte.set_colors(self.fgcolor_active, self.bgcolor,
                             self.palette_active)
         self.set_cursor_color()
         if not self.terminator.doing_layout:
             self.terminator.last_focused_term = self
-            if self.get_toplevel().is_child_notebook():
-                notebook = self.get_toplevel().get_children()[0]
+            if self.get_root().is_child_notebook():
+                notebook = self.get_root().get_child()
                 notebook.set_last_active_term(self.uuid)
                 notebook.clean_last_active_term()
-                self.get_toplevel().last_active_term = None
+                self.get_root().last_active_term = None
             else:
-                self.get_toplevel().last_active_term = self.uuid
+                self.get_root().last_active_term = self.uuid
         self.emit('focus-in')
 
-    def on_vte_focus_out(self, _widget, _event):
+    def on_vte_focus_out(self, ctrl):
         """Inform other parts of the application when focus is lost"""
         self.vte.set_colors(self.fgcolor_inactive, self.bgcolor_inactive,
                             self.palette_inactive)
@@ -1516,39 +1358,36 @@ class Terminal(Gtk.VBox):
         """A child widget is done editing a label, return focus to VTE"""
         self.vte.grab_focus()
 
-    def deferred_on_vte_size_allocate(self, widget, allocation):
-        # widget & allocation are not used in on_vte_size_allocate, so we
-        # can use the on_vte_size_allocate instead of duplicating the code
+    def deferred_on_vte_size_allocate(self, widget, *args):
+        # widget & args are not used in on_vte_size_allocate
         if self.pending_on_vte_size_allocate:
             return
         self.pending_on_vte_size_allocate = True
-        GObject.idle_add(self.do_deferred_on_vte_size_allocate, widget, allocation)
+        GObject.idle_add(self.do_deferred_on_vte_size_allocate)
 
-    def do_deferred_on_vte_size_allocate(self, widget, allocation):
+    def do_deferred_on_vte_size_allocate(self):
         self.pending_on_vte_size_allocate = False
-        self.on_vte_size_allocate(widget, allocation)
+        self.on_vte_size_allocate()
 
-    def on_vte_size_allocate(self, widget, allocation):
+    def on_vte_size_allocate(self):
         self.titlebar.update_terminal_size(self.vte.get_column_count(),
                 self.vte.get_row_count())
         if self.config['geometry_hinting']:
-            window = self.get_toplevel()
+            window = self.get_root()
             window.deferred_set_rough_geometry_hints()
         else:
-            window = self.get_toplevel()
+            window = self.get_root()
             window.disable_geometry_hints()
 
-    def on_vte_notify_enter(self, term, event):
+    def on_vte_notify_enter(self, ctrl, x, y):
         """Handle the mouse entering this terminal"""
-        # FIXME: This shouldn't be looking up all these values every time
         sloppy = False
         if self.config['focus'] == 'system':
             sloppy = self.config.get_system_focus() in ['sloppy', 'mouse']
         elif self.config['focus'] in ['sloppy', 'mouse']:
             sloppy = True
         if sloppy and self.titlebar.editing() == False:
-            term.grab_focus()
-            return False
+            self.grab_focus()
 
     def get_zoom_data(self):
         """Return a dict of information for Window"""
@@ -1562,9 +1401,9 @@ class Terminal(Gtk.VBox):
 
         return data
 
-    def zoom_scale(self, widget, allocation, old_data):
+    def zoom_scale(self, widget, _pspec, old_data):
         """Scale our font correctly based on how big we are not vs before"""
-        self.cnxids.remove_signal(self, 'size-allocate')
+        self.cnxids.remove_signal(self, 'notify::width')
         # FIXME: Is a zoom signal actually used anywhere?
         self.cnxids.remove_signal(self, 'zoom')
 
@@ -1596,7 +1435,7 @@ class Terminal(Gtk.VBox):
 
     def is_zoomed(self):
         """Determine if we are a zoomed terminal"""
-        window = self.get_toplevel()
+        window = self.get_root()
         return window.is_zoomed()
 
     def zoom(self, widget=None):
@@ -1793,7 +1632,7 @@ class Terminal(Gtk.VBox):
                 dbg('custom url handler did not work, falling back to defaults')
 
         try:
-            Gtk.show_uri(None, url, Gdk.CURRENT_TIME)
+            Gtk.show_uri(None, url, 0)
             return
         except:
             dbg('Gtk.show_uri did not work, falling through to xdg-open')
@@ -1878,40 +1717,18 @@ class Terminal(Gtk.VBox):
     def on_bell(self, widget):
         """Set the urgency hint/icon/flash for our window"""
         if self.config['urgent_bell']:
-            window = self.get_toplevel()
-            if window.is_toplevel():
-                window.set_urgency_hint(True)
+            window = self.get_root()
+            if window is not None:
+                pass  # GTK4: set_urgency_hint removed; no direct replacement
         if self.config['icon_bell']:
             self.titlebar.icon_bell()
         if self.config['visible_bell']:
-            # Repurposed the code used for drag and drop overlay to provide a visual terminal flash
-            alloc = widget.get_allocation()
+            widget.queue_draw()
+            GObject.timeout_add(100, self.on_bell_cleanup, widget)
 
-            if self.config['use_theme_colors']:
-                color = self.vte.get_style_context().get_color(Gtk.StateType.NORMAL)  # VERIFY FOR GTK3 as above
-            else:
-                color = Gdk.RGBA()
-                color.parse(self.config['foreground_color'])  # VERIFY FOR GTK3
-
-            coord = ((0, 0), (alloc.width, 0), (alloc.width, alloc.height), (0, alloc.height))
-
-            # here, we define some widget internal values
-            widget._draw_data = { 'color': color, 'coord' : coord }
-            # redraw by forcing an event
-            connec = widget.connect_after('draw', self.on_draw)
-            widget.queue_draw_area(0, 0, alloc.width, alloc.height)
-            widget.get_window().process_updates(True)
-            # finally reset the values
-            widget.disconnect(connec)
-            widget._draw_data = None
-
-            # Add timeout to clean up display
-            GObject.timeout_add(100, self.on_bell_cleanup, widget, alloc)
-
-    def on_bell_cleanup(self, widget, alloc):
+    def on_bell_cleanup(self, widget):
         """Queue a redraw to clear the visual flash overlay"""
-        widget.queue_draw_area(0, 0, alloc.width, alloc.height)
-        widget.get_window().process_updates(True)
+        widget.queue_draw()
         return False
 
     def describe_layout(self, count, parent, global_layout, child_order, save_cwd = False):
@@ -1974,7 +1791,7 @@ class Terminal(Gtk.VBox):
         """Get a real allocation which includes the bloody x and y coordinates
         (grumble, grumble) """
         alloc = super(Terminal, self).get_allocation()
-        rv = self.translate_coordinates(self.get_toplevel(), 0, 0)
+        rv = self.translate_coordinates(self.get_root(), 0, 0)
         if rv:
             alloc.x, alloc.y = rv
         return alloc
@@ -2177,7 +1994,7 @@ class Terminal(Gtk.VBox):
         self.terminator.new_window(self.get_cwd(), self.get_profile())
 
     def key_new_tab(self):
-        self.get_toplevel().tab_new(self)
+        self.get_root().tab_new(self)
 
     def key_new_terminator(self):
         spawn_new_terminator(self.origcwd, ['-u'])
@@ -2201,41 +2018,52 @@ class Terminal(Gtk.VBox):
         self.emit('enumerate', True)
 
     def key_edit_window_title(self):
-        window = self.get_toplevel()
-        dialog = Gtk.Dialog(_('Rename Window'), window,
-                            Gtk.DialogFlags.MODAL,
-                            (Gtk.STOCK_CANCEL, Gtk.ResponseType.REJECT,
-                             Gtk.STOCK_OK, Gtk.ResponseType.ACCEPT))
+        window = self.get_root()
+        dialog = Gtk.Dialog(_('Rename Window'), window, Gtk.DialogFlags.MODAL)
+        dialog.add_button(_('Cancel'), Gtk.ResponseType.REJECT)
+        dialog.add_button(_('OK'), Gtk.ResponseType.ACCEPT)
         dialog.set_default_response(Gtk.ResponseType.ACCEPT)
         dialog.set_resizable(False)
-        dialog.set_border_width(8)
 
         label = Gtk.Label(label=_('Enter a new title for the Terminator window...'))
         name = Gtk.Entry()
         name.set_activates_default(True)
         if window.title.text != self.vte.get_window_title():
-            name.set_text(self.get_toplevel().title.text)
+            name.set_text(window.title.text)
 
-        dialog.vbox.pack_start(label, False, False, 6)
-        dialog.vbox.pack_start(name, False, False, 6)
+        content = dialog.get_content_area()
+        content.set_spacing(6)
+        content.set_margin_top(8)
+        content.set_margin_bottom(8)
+        content.set_margin_start(8)
+        content.set_margin_end(8)
+        content.append(label)
+        content.append(name)
 
-        dialog.show_all()
-        res = dialog.run()
-        if res == Gtk.ResponseType.ACCEPT:
+        result = [Gtk.ResponseType.REJECT]
+        loop = GLib.MainLoop()
+        def on_response(d, r):
+            result[0] = r
+            d.destroy()
+            loop.quit()
+        dialog.connect('response', on_response)
+        dialog.present()
+        loop.run()
+
+        if result[0] == Gtk.ResponseType.ACCEPT:
             if name.get_text():
                 window.title.force_title(None)
                 window.title.force_title(name.get_text())
             else:
                 window.title.force_title(None)
-        dialog.destroy()
         return
 
     def key_edit_tab_title(self):
-        window = self.get_toplevel()
+        window = self.get_root()
         if not window.is_child_notebook():
             return
 
-        notebook = window.get_children()[0]
+        notebook = window.get_child()
         n_page = notebook.get_current_page()
         page = notebook.get_nth_page(n_page)
         label = notebook.get_tab_label(page)
