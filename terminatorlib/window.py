@@ -1079,9 +1079,17 @@ class WindowTitle(object):
 
     def set_title(self, widget, text):
         """Set the title"""
-        if not self.forced:
-            self.text = text
-            self.update()
+        if self.forced:
+            return
+
+        # Background terminals can keep emitting OSC title changes. Their
+        # pane and tab labels should update, but they must not overwrite the
+        # desktop window title owned by the focused terminal.
+        if widget is not None and not widget.get_vte().is_focus():
+            return
+
+        self.text = text
+        self.update()
 
     def force_title(self, newtext):
         """Force a specific title"""
