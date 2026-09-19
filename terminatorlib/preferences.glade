@@ -2875,6 +2875,9 @@
                     <child>
                       <object class="GtkScrolledWindow" id="scrolledwindow4">
                         <property name="visible">True</property>
+                        <property name="vexpand">True</property>
+                        <property name="vexpand-set">True</property>
+
                         <property name="hscrollbar-policy">never</property>
                         <child>
                           <object class="GtkTreeView" id="layoutlist">
