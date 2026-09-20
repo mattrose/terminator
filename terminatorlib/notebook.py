@@ -409,17 +409,17 @@ class Notebook(Container, Gtk.Notebook):
     def find_tab_root(self, widget):
         """Look for the tab child which is or ultimately contains the supplied
         widget"""
-        parent = widget.get_parent()
-        previous = parent
+        # GTK4 interposes an internal GtkStack between a page and the Notebook,
+        # so walk up until we hit a widget that really is one of our pages
+        # rather than assuming the parent chain reaches self directly.
+        candidate = widget
 
-        while parent is not None and parent is not self:
-            previous = parent
-            parent = parent.get_parent()
+        while candidate is not None:
+            if self.page_num(candidate) != -1:
+                return(candidate)
+            candidate = candidate.get_parent()
 
-        if previous == self:
-            return(widget)
-        else:
-            return(previous)
+        return(widget)
 
     def update_tab_label_text(self, widget, text):
         """Update the text of a tab label"""
