@@ -68,17 +68,17 @@ def test_non_empty_default_keybinding_accels_are_distinct():
     "accel_params,expected",
     [
         # 1) 'edit_tab_title' Ctrl+Alt+A
-        (("9", 97, CONTROL_ALT_MOD, 38), False,),
+        (("10", 97, CONTROL_ALT_MOD, 38), False,),
         # 2) 'edit_terminal_title' Ctrl+Alt+A
-        (("10", 97, CONTROL_ALT_MOD, 38), True,),
+        (("11", 97, CONTROL_ALT_MOD, 38), True,),
         # 3) 'edit_window_title' F11
-        (("11", 65480, Gdk.ModifierType(0), 95), True,),
+        (("12", 65480, Gdk.ModifierType(0), 95), True,),
         # 4) 'zoom_in' Shift+Ctrl+Z
-        (("70", 122, CONTROL_SHIFT_MOD, 52), True,),
+        (("71", 122, CONTROL_SHIFT_MOD, 52), True,),
         # 5) 'close_terminal' Ctrl+Alt+{
         (("3", 123, CONTROL_ALT_SHIFT_MOD, 34), False,),
         # 6) 'zoom_in' Shift+Ctrl+B
-        (("70", 98, CONTROL_SHIFT_MOD, 56), False,),
+        (("71", 98, CONTROL_SHIFT_MOD, 56), False,),
     ],
 )
 def test_message_dialog_is_shown_on_duplicate_accel_assignment(
@@ -120,13 +120,13 @@ def test_message_dialog_is_shown_on_duplicate_accel_assignment(
     "accel_params",
     [
         # 1) 'edit_tab_title' Ctrl+Alt+A
-        ("9", 97, CONTROL_ALT_MOD, 38),
-        # 2) 'edit_terminal_title' Ctrl+Alt+A
         ("10", 97, CONTROL_ALT_MOD, 38),
+        # 2) 'edit_terminal_title' Ctrl+Alt+A
+        ("11", 97, CONTROL_ALT_MOD, 38),
         # 3) 'edit_window_title' F11
-        ("11", 65480, Gdk.ModifierType(0), 95),
+        ("12", 65480, Gdk.ModifierType(0), 95),
         # 4) 'zoom_in' Shift+Ctrl+Z
-        ("70", 122, CONTROL_SHIFT_MOD, 52),
+        ("71", 122, CONTROL_SHIFT_MOD, 52),
     ],
 )
 def test_duplicate_accels_not_possible_to_set(accel_params):

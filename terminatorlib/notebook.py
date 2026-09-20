@@ -75,19 +75,31 @@ class Notebook(Container, Gtk.Notebook):
         self.add_controller(scroll_ctrl)
 
     def create_window_detach(self, notebook, widget, x, y):
-        """Create a window to contain a detached tab"""
-        dbg('creating window for detached tab: %s' % widget)
-        maker = Factory()
+        """Defer detaching a dropped tab until the drag has ended"""
+        dbg('deferring detach of dropped tab: %s' % widget)
+        GObject.idle_add(self.detach_tab_to_new_window, widget, x, y)
 
+    def detach_tab_to_new_window(self, widget, x=None, y=None):
+        """Detach the tab containing widget into a newly created window"""
+        child = self.find_tab_root(widget)
+        if self.page_num(child) == -1:
+            err('could not find tab to detach for %s' % widget)
+            return False
+
+        dbg('detaching tab into new window: %s' % child)
+        maker = Factory()
         window = maker.make('Window')
         # GTK4/Wayland: window.move() not available; size hint only
         size = self.window.get_default_size()
         window.set_default_size(size[0], size[1])
 
-        self.detach_tab(widget)
-        self.disconnect_child(widget)
+        self.detach_tab(child)
+        self.disconnect_child(child)
         self.hoover()
-        window.set_child(widget)
+        window.set_child(child)
+
+        window.present()
+        return False
 
     def create_layout(self, layout):
         """Apply layout configuration"""
@@ -213,7 +225,9 @@ class Notebook(Container, Gtk.Notebook):
             err('%s not found in Notebook. Actual parent is: %s' %
                     (widget, widget.get_parent()))
             return(False)
-        self.remove_page(page_num)
+        # detach_tab takes the child widget, not a page index (upstream passes
+        # page_num here, which raises TypeError)
+        self.detach_tab(widget)
         self.disconnect_child(widget)
         return(True)
 
@@ -276,6 +290,7 @@ class Notebook(Container, Gtk.Notebook):
                    'group-tab-toggle': top_window.group_tab_toggle,
                    'ungroup-tab': top_window.ungroup_tab,
                    'move-tab': top_window.move_tab,
+                   'detach-tab': top_window.detach_tab_to_new_window,
                    'tab-new': [top_window.tab_new, widget],
                    'navigate': top_window.navigate_terminal,
                    'zoom': top_window.zoom,

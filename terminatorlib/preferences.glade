@@ -2333,6 +2333,14 @@
                                     </child>
                                   </object>
                                 </child>
+                                <child>
+                                  <object class="GtkCheckButton" id="background_image_span_window_checkbutton">
+                                    <property name="label" translatable="yes">Span background image across the window</property>
+                                    <property name="visible">True</property>
+                                    <property name="halign">start</property>
+                                    <signal name="toggled" handler="on_background_image_span_window_checkbutton_toggled" swapped="no" />
+                                  </object>
+                                </child>
                               </object>
                             </child>
                           </object>
@@ -3257,7 +3265,7 @@
                         <child>
                           <object class="GtkLabel" id="about_version_label">
                             <property name="visible">True</property>
-                            <property name="label" translatable="yes">Version: 2.1.5</property>
+                            <property name="label" translatable="yes">Version: 2.1.6</property>
                           </object>
                         </child>
                       </object>
@@ -3342,6 +3350,13 @@ Much of the behavior of Terminator is based on GNOME Terminal, and we are adding
                 <property name="label">Discard Changes</property>
                 <property name="visible">True</property>
                 <signal name="clicked" handler="on_restoreconfigbutton_clicked" swapped="no" />
+              </object>
+            </child>
+            <child>
+              <object class="GtkButton" id="applybutton">
+                <property name="label">Apply</property>
+                <property name="visible">True</property>
+                <signal name="clicked" handler="on_applybutton_clicked" swapped="no" />
               </object>
             </child>
             <child>

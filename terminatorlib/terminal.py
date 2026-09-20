@@ -74,6 +74,7 @@ class Terminal(Gtk.Box):
         'group-all-toggle': (GObject.SignalFlags.RUN_LAST, None, ()),
         'move-tab': (GObject.SignalFlags.RUN_LAST, None,
             (GObject.TYPE_STRING,)),
+        'detach-tab': (GObject.SignalFlags.RUN_LAST, None, ()),
         'group-win': (GObject.SignalFlags.RUN_LAST, None, ()),
         'group-win-toggle': (GObject.SignalFlags.RUN_LAST, None, ()),
         'ungroup-win': (GObject.SignalFlags.RUN_LAST, None, ()),
@@ -918,7 +919,15 @@ class Terminal(Gtk.Box):
             elif self.config['scrollbar_position'] == 'right':
                 self.terminalbox.reorder_child_after(self.vte, None)
 
-        self.titlebar.update()
+        toplevel = self.get_root()
+        if isinstance(toplevel, Gtk.Window) and toplevel.is_active():
+            focused = self.terminator.get_focussed_terminal()
+            if focused is None:
+                focused = self.terminator.last_focused_term
+            self.titlebar.update(focused or self)
+        else:
+            self.titlebar.update('window-focus-out')
+
         self.vte.queue_draw()
 
     def set_cursor_color(self):
@@ -1110,12 +1119,21 @@ class Terminal(Gtk.Box):
         state = event.get_modifier_state() if event else Gdk.ModifierType(0)
 
         if button == self.MOUSEBUTTON_LEFT:
-            if self.config["link_single_click"] or state & Gdk.ModifierType.CONTROL_MASK:
+            # Ctrl+leftclick on a URL should open it. Only the initial press
+            # counts, so a double-click does not open the URL once per press.
+            if n_press == 1 and (self.config["link_single_click"]
+                                 or state & Gdk.ModifierType.CONTROL_MASK):
                 char_w = self.vte.get_char_width() or 1
                 char_h = self.vte.get_char_height() or 1
                 url = self.vte.match_check(int(x / char_w), int(y / char_h))
                 if url and url[0]:
                     self.open_url(url, prepare=True)
+                    # Consume the event: the click we just acted on must not
+                    # also be forwarded to the application underneath. Apps that
+                    # enable mouse reporting and treat Ctrl+click as "open link"
+                    # (e.g. TUIs) would otherwise open the same URL a second time.
+                    gesture.set_state(Gtk.EventSequenceState.CLAIMED)
+                    return True
         elif button == self.MOUSEBUTTON_MIDDLE:
             if not (state & Gdk.ModifierType.CONTROL_MASK):
                 paste_primary = not self.config['putty_paste_style_source_clipboard']
@@ -1904,6 +1922,9 @@ class Terminal(Gtk.Box):
 
     def key_move_tab_left(self):
         self.emit('move-tab', 'left')
+
+    def key_detach_tab(self):
+        self.emit('detach-tab')
 
     def key_toggle_zoom(self):
         if self.is_zoomed():

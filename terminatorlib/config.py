@@ -124,6 +124,10 @@ DEFAULTS = {
             'window_decoration_style': 'auto',
         },
         'keybindings': {
+            'zoom'             : '',
+            'unzoom'           : '',
+            'maximise'         : '',
+            'open_debug_tab'   : '',
             'zoom_in'          : '<Control>plus',
             'zoom_out'         : '<Control>minus',
             'zoom_normal'      : '<Control>0',
@@ -207,7 +211,8 @@ DEFAULTS = {
             'previous_profile' : '', 
             'preferences'      : '',
             'preferences_keybindings' : '<Control><Shift>k',
-            'help'             : 'F1'
+            'help'             : 'F1',
+            'detach_tab'       : '<Shift><Control>d'
         },
         'profiles': {
             'default':  {
@@ -221,6 +226,7 @@ DEFAULTS = {
                 'background_type'       : 'solid',
                 'background_image'      : '',
                 'background_image_mode' : 'stretch_and_fill',
+                'background_image_span_window': False,
                 'background_image_align_horiz': 'center',
                 'background_image_align_vert' : 'middle',
                 'background_blur'       : False,

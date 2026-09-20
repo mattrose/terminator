@@ -23,6 +23,23 @@ class TerminalPopupMenu(object):
         self.terminator = Terminator()
         self.config = Config()
 
+    def close_terminal(self, _menuitem=None):
+        """Close the terminal after applying the normal close confirmation."""
+        terminal = self.terminal
+        container = terminal.get_parent()
+
+        while container and not hasattr(container, 'construct_confirm_close'):
+            container = container.get_parent()
+
+        if container:
+            confirm_close = container.construct_confirm_close(
+                terminal.get_root(), terminal)
+            if confirm_close != Gtk.ResponseType.ACCEPT:
+                dbg('user cancelled request')
+                return
+
+        terminal.close()
+
     def show(self, parent_widget, x=0, y=0):
         """Build and show a Gtk.PopoverMenu from Gio.Menu.
 
@@ -104,11 +121,14 @@ class TerminalPopupMenu(object):
             if self.terminator.debug_address is not None:
                 action('open-debug-tab', lambda: terminal.emit('tab-new', True, terminal))
                 sec.append(_('Open Debug Tab'), 'menu.open-debug-tab')
+            if isinstance(terminal.get_root().get_child(), Gtk.Notebook):
+                action('detach-tab', lambda: terminal.emit('detach-tab'))
+                sec.append(_('Detach Tab'), 'menu.detach-tab')
             menu.append_section(None, sec)
 
         # ── Close ──────────────────────────────────────────────────────────
         sec = Gio.Menu()
-        action('close', lambda: terminal.close())
+        action('close', lambda: self.close_terminal())
         sec.append(_('Close'), 'menu.close')
         menu.append_section(None, sec)
 

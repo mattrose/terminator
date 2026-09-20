@@ -570,6 +570,7 @@ class Window(Container, Gtk.Window):
                        'group-tab-toggle': self.group_tab_toggle,
                        'ungroup-tab': self.ungroup_tab,
                        'move-tab': self.move_tab,
+                       'detach-tab': self.detach_tab_to_new_window,
                        'tab-new': [self.tab_new, widget],
                        'navigate': self.navigate_terminal,
                        'rotate-cw': [self.rotate, True],
@@ -949,6 +950,20 @@ class Window(Container, Gtk.Window):
 
         notebook.reorder_child(child, page)
 
+    def detach_tab_to_new_window(self, widget):
+        """Detach the tab containing widget into a new window"""
+        if self.is_zoomed():
+            self.unzoom()
+
+        maker = Factory()
+        notebook = self.get_child()
+
+        if not maker.isinstance(notebook, 'Notebook'):
+            dbg('not in a notebook, refusing to detach tab')
+            return
+
+        notebook.detach_tab_to_new_window(widget)
+
     def navigate_terminal(self, terminal, direction):
         """Navigate around terminals"""
         if self.is_zoomed():
@@ -1079,9 +1094,17 @@ class WindowTitle(object):
 
     def set_title(self, widget, text):
         """Set the title"""
-        if not self.forced:
-            self.text = text
-            self.update()
+        if self.forced:
+            return
+
+        # Background terminals can keep emitting OSC title changes. Their
+        # pane and tab labels should update, but they must not overwrite the
+        # desktop window title owned by the focused terminal.
+        if widget is not None and not widget.get_vte().is_focus():
+            return
+
+        self.text = text
+        self.update()
 
     def force_title(self, newtext):
         """Force a specific title"""
