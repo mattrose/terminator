@@ -114,6 +114,7 @@ class Paned(Container):
                     'group-tab-toggle': top_window.group_tab_toggle,
                     'ungroup-tab': top_window.ungroup_tab,
                     'move-tab': top_window.move_tab,
+                    'detach-tab': top_window.detach_tab_to_new_window,
                     'maximise': [top_window.zoom, False],
                     'tab-new': [top_window.tab_new, widget],
                     'navigate': top_window.navigate_terminal,

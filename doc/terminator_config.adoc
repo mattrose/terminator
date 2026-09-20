@@ -760,6 +760,13 @@ Default value: *solid*
 Specify the path to an image that will be used as background.
 This option is ignored unless *background_type* is set to 'image'.
 
+*background_image_span_window* = _boolean_::
+If set to True, the background image is scaled and aligned relative to the
+entire window, and each terminal draws the corresponding section.
+If set to False, each terminal draws a complete copy of the background image.
+This option is ignored unless *background_type* is set to 'image'. +
+Default value: *False*
+
 *background_image_mode* = _string_::
 Specify how the background image will be drawn.
 'stretch_and_fill' to fill the terminal entirely, without necessarily
