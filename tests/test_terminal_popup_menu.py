@@ -6,7 +6,7 @@ import sys
 import gi
 
 sys.path.insert(0, os.path.realpath(os.path.join(os.path.dirname(__file__), "..")))
-gi.require_version("Gtk", "3.0")
+gi.require_version("Gtk", "4.0")
 
 from gi.repository import Gtk
 
@@ -50,7 +50,7 @@ class FakeTerminal:
     def get_parent(self):
         return self.parent
 
-    def get_toplevel(self):
+    def get_root(self):
         return self.toplevel
 
     def close(self):
@@ -83,7 +83,7 @@ def test_close_terminal_keeps_terminal_open_when_confirmation_rejects():
     popup_for(terminal).close_terminal()
 
     assert not terminal.closed
-    assert container.confirmations == [(terminal.get_toplevel(), terminal)]
+    assert container.confirmations == [(terminal.get_root(), terminal)]
 
 
 def test_close_terminal_finds_confirmation_container_above_parent_widget():
@@ -95,4 +95,4 @@ def test_close_terminal_finds_confirmation_container_above_parent_widget():
     popup_for(terminal).close_terminal()
 
     assert terminal.closed
-    assert container.confirmations == [(terminal.get_toplevel(), terminal)]
+    assert container.confirmations == [(terminal.get_root(), terminal)]

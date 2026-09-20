@@ -46,18 +46,24 @@ class LayoutLauncher:
         self.builder.add_from_string(gladedata)
         self.window = self.builder.get_object('layoutlauncherwin')
 
-        icon_theme = Gtk.IconTheme.get_default()
-        if icon_theme.lookup_icon('terminator-layout', 48, 0):
+        from gi.repository import Gdk
+        try:
+            icon_theme = Gtk.IconTheme.get_for_display(Gdk.Display.get_default())
+        except AttributeError:
+            icon_theme = Gtk.IconTheme.get_default()
+        try:
+            has_icon = icon_theme.has_icon('terminator-layout')
+        except Exception:
+            has_icon = icon_theme.lookup_icon('terminator-layout', 48, 0) is not None
+        if has_icon:
             self.window.set_icon_name('terminator-layout')
         else:
             dbg('Unable to load Terminator layout launcher icon')
-            icon = self.window.render_icon(Gtk.STOCK_DIALOG_INFO, Gtk.IconSize.BUTTON)
-            self.window.set_icon(icon)
 
         self.window.set_size_request(250, 300)
         self.builder.connect_signals(self)
         self.window.connect('destroy', self.on_destroy_event)
-        self.window.show_all()
+        self.window.present()
         self.layouttreeview = self.builder.get_object('layoutlist')
         self.layouttreestore = self.builder.get_object('layoutstore')
         self.update_layouts()
@@ -106,4 +112,5 @@ if __name__ == '__main__':
     from . import terminal
     LAYOUTLAUNCHER = LayoutLauncher()
 
-    Gtk.main()
+    from gi.repository import GLib
+    GLib.MainLoop().run()

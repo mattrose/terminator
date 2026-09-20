@@ -30,18 +30,18 @@ except OSError:
 # Check we have simple basics like Gtk+ and a valid $DISPLAY
 try:
     import gi
-    gi.require_version('Gtk','3.0')
+    gi.require_version('Gtk','4.0')
     # pylint: disable-msg=W0611
     from gi.repository import Gtk, Gdk, GLib
 
-    if Gdk.Display.get_default() == None:
-        print('You need to run terminator in an X environment. ' \
-              'Make sure $DISPLAY is properly set')
+    if Gdk.Display.get_default() is None:
+        print('You need to run terminator with a display. ' \
+              'Make sure a display is available.')
         sys.exit(1)
 
 except ImportError:
     print('You need to install the python bindings for ' \
-           'gobject, gtk and pango to run Terminator.')
+           'gobject, gtk4 and pango to run Terminator.')
     sys.exit(1)
 
 import terminatorlib.optionparse
@@ -141,12 +141,13 @@ if __name__ == '__main__':
         # pylint: disable-msg=W0611
         import threading
 
-        Gdk.threads_init()
         (DEBUGTHREAD, DEBUGSVR) = debugserver.spawn(locals())
         TERMINATOR.debug_address = DEBUGSVR.server_address
 
+    MAIN_LOOP = GLib.MainLoop()
+    TERMINATOR.main_loop = MAIN_LOOP
     try:
-        Gtk.main()
+        MAIN_LOOP.run()
     except KeyboardInterrupt:
         pass
 

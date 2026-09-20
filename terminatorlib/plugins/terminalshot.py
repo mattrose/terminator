@@ -4,55 +4,55 @@
 terminals"""
 
 import os
-from gi.repository import Gtk
-from gi.repository import GdkPixbuf
+from gi.repository import Gtk, GLib
 import terminatorlib.plugin as plugin
 from terminatorlib.translation import _
 from terminatorlib.util import widget_pixbuf
 
-# Every plugin you want Terminator to load *must* be listed in 'AVAILABLE'
 AVAILABLE = ['TerminalShot']
 
 class TerminalShot(plugin.MenuItem):
     """Add custom commands to the terminal menu"""
     capabilities = ['terminal_menu']
     dialog_action = Gtk.FileChooserAction.SAVE
-    dialog_buttons = (_("_Cancel"), Gtk.ResponseType.CANCEL,
-                      _("_Save"), Gtk.ResponseType.OK)
 
     def __init__(self):
         plugin.MenuItem.__init__(self)
 
     def callback(self, menuitems, menu, terminal):
         """Add our menu items to the menu"""
-        item = Gtk.MenuItem.new_with_mnemonic(_('Terminal _screenshot'))
-        item.connect("activate", self.terminalshot, terminal)
-        menuitems.append(item)
+        menuitems.append((_('Terminal screenshot'), self.terminalshot, terminal))
 
     def terminalshot(self, _widget, terminal):
         """Handle the taking, prompting and saving of a terminalshot"""
-        # Grab a pixbuf of the terminal
         orig_pixbuf = widget_pixbuf(terminal)
 
-        savedialog = Gtk.FileChooserDialog(title=_("Save image"),
-                                           action=self.dialog_action,
-                                           buttons=self.dialog_buttons)
-        savedialog.set_transient_for(_widget.get_toplevel())
+        savedialog = Gtk.FileChooserDialog(
+            title=_("Save image"),
+            transient_for=terminal.get_root(),
+            action=self.dialog_action
+        )
+        savedialog.add_button(_("_Cancel"), Gtk.ResponseType.CANCEL)
+        savedialog.add_button(_("_Save"), Gtk.ResponseType.OK)
         savedialog.set_do_overwrite_confirmation(True)
         savedialog.set_local_only(True)
 
-        pixbuf = orig_pixbuf.scale_simple(orig_pixbuf.get_width() / 2, 
-                                     orig_pixbuf.get_height() / 2,
-                                     GdkPixbuf.InterpType.BILINEAR)
-        image = Gtk.Image.new_from_pixbuf(pixbuf)
-        savedialog.set_preview_widget(image)
+        result = [Gtk.ResponseType.CANCEL]
+        path = [None]
+        loop = GLib.MainLoop()
 
-        savedialog.show_all()
-        response = savedialog.run()
-        path = None
-        if response == Gtk.ResponseType.OK:
-            path = os.path.join(savedialog.get_current_folder(),
-                                savedialog.get_filename())
-            orig_pixbuf.savev(path, 'png', [], [])
+        def on_response(d, r):
+            result[0] = r
+            if r == Gtk.ResponseType.OK:
+                gfile = d.get_file()
+                if gfile:
+                    path[0] = gfile.get_path()
+            d.destroy()
+            loop.quit()
 
-        savedialog.destroy()
+        savedialog.connect('response', on_response)
+        savedialog.present()
+        loop.run()
+
+        if result[0] == Gtk.ResponseType.OK and path[0] and orig_pixbuf:
+            orig_pixbuf.savev(path[0], 'png', [], [])

@@ -187,50 +187,67 @@ the tab will also close all terminals within it.')
             description_text = ''
 
         # dialog GUI
-        dialog = Gtk.Dialog(_('Close?'), window, Gtk.DialogFlags.MODAL)
+        from gi.repository import GLib
+        dialog = Gtk.Dialog(title=_('Close?'), transient_for=window, modal=True)
         dialog.set_resizable(False)
-    
-        dialog.add_button(Gtk.STOCK_CANCEL, Gtk.ResponseType.REJECT)
-        c_all = dialog.add_button(Gtk.STOCK_CLOSE, Gtk.ResponseType.ACCEPT)
-        c_all.get_children()[0].get_children()[0].get_children()[1].set_label(
-                confirm_button_text)
-    
+
+        dialog.add_button(_('_Cancel'), Gtk.ResponseType.REJECT)
+        dialog.add_button(confirm_button_text, Gtk.ResponseType.ACCEPT)
+
         primary = Gtk.Label(label=_('<big><b>' + big_label_text + '</b></big>'))
         primary.set_use_markup(True)
-        primary.set_alignment(0, 0.5)
+        primary.set_xalign(0)
+        primary.set_yalign(0.5)
+        primary.set_margin_top(6)
+        primary.set_margin_bottom(6)
 
         secondary = Gtk.Label(label=description_text)
-        secondary.set_line_wrap(True)
-                    
-        labels = Gtk.VBox()
-        labels.pack_start(primary, False, False, 6)
-        labels.pack_start(secondary, False, False, 6)
-    
-        image = Gtk.Image.new_from_stock(Gtk.STOCK_DIALOG_WARNING,
-                                         Gtk.IconSize.DIALOG)
-        image.set_alignment(0.5, 0)
-    
-        box = Gtk.HBox()
-        box.pack_start(image, False, False, 6)
-        box.pack_start(labels, False, False, 6)
-        dialog.vbox.pack_start(box, False, False, 12)
+        secondary.set_wrap(True)
+        secondary.set_margin_top(6)
+        secondary.set_margin_bottom(6)
 
-        checkbox = Gtk.CheckButton(_("Do not show this message next time"))
-        dialog.vbox.pack_end(checkbox, True, True, 0)
-    
-        dialog.show_all()
+        labels = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        labels.append(primary)
+        labels.append(secondary)
 
-        result = dialog.run()
-        
+        image = Gtk.Image.new_from_icon_name('dialog-warning')
+        image.set_pixel_size(48)
+        image.set_halign(Gtk.Align.CENTER)
+        image.set_valign(Gtk.Align.START)
+        image.set_margin_start(6)
+        image.set_margin_end(6)
+
+        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        box.set_margin_top(12)
+        box.set_margin_bottom(12)
+        box.append(image)
+        box.append(labels)
+        dialog.get_content_area().append(box)
+
+        checkbox = Gtk.CheckButton(label=_("Do not show this message next time"))
+        checkbox.set_margin_top(6)
+        checkbox.set_margin_bottom(6)
+        dialog.get_content_area().append(checkbox)
+
+        result = [Gtk.ResponseType.REJECT]
+        checkbox_active = [False]
+        loop = GLib.MainLoop()
+        def on_response(d, r):
+            result[0] = r
+            checkbox_active[0] = checkbox.get_active()
+            d.destroy()
+            loop.quit()
+        dialog.connect('response', on_response)
+        dialog.present()
+        loop.run()
+
         # set configuration
         self.config.base.reload()
-        if checkbox.get_active():
+        if checkbox_active[0]:
             self.config['ask_before_closing'] = 'never'
         self.config.save()
 
-        dialog.destroy()
-                
-        return(result)
+        return result[0]
 
     def propagate_title_change(self, widget, title):
         """Pass a title change up the widget stack"""
